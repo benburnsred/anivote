@@ -36,7 +36,7 @@ jobs:
             'function adminPolls()',
             'function adminVotes()',
             'syncJikanAnime(false);',
-            'https://api.jikan.moe/v4/seasons/now?sfw=true'
+            'https://api.jikan.moe/v4/seasons/now?sfw=true&limit=12&page=1'
           ];
           for (const item of required) {
             if (!html.includes(item)) throw new Error('Missing required feature: ' + item);
@@ -44,7 +44,8 @@ jobs:
           console.log('Core AniVote features preserved');
           NODE
 
-      - name: Validate Jikan current-season response
+      - name: Probe live Jikan current-season response
+        continue-on-error: true
         run: |
           node <<'NODE'
           const url = 'https://api.jikan.moe/v4/seasons/now?sfw=true';
@@ -70,6 +71,70 @@ jobs:
           const usable = body.data.filter(x => x && x.mal_id && x.title && x.images);
           if (usable.length < 8) throw new Error('Jikan data is missing required anime metadata');
           console.log('Jikan response OK with', usable.length, 'usable anime entries');
+          NODE
+
+      - name: Runtime test Jikan mapping and voting with fixture
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const html = fs.readFileSync('index.html', 'utf8');
+          const match = html.match(/<script>([\s\S]*?)<\/script>/);
+          if (!match) throw new Error('Inline script not found');
+
+          const store = {};
+          const app = { innerHTML: '' };
+          global.location = { hash: '' };
+          global.localStorage = {
+            getItem: key => Object.prototype.hasOwnProperty.call(store, key) ? store[key] : null,
+            setItem: (key, value) => { store[key] = String(value); },
+            removeItem: key => { delete store[key]; }
+          };
+          global.document = {
+            getElementById: id => id === 'app' ? app : null,
+            createElement: () => ({ className: '', textContent: '', remove() {}, click() {} }),
+            body: { appendChild() {} }
+          };
+          global.window = {
+            addEventListener() {},
+            scrollTo() {}
+          };
+          const fixture = Array.from({ length: 12 }, (_, i) => ({
+            mal_id: 70000 + i,
+            title: 'Fixture Anime ' + (i + 1),
+            title_english: 'Jikan Anime ' + (i + 1),
+            title_japanese: 'Fixture JP ' + (i + 1),
+            studios: [{ name: 'Fixture Studio ' + (i + 1) }],
+            score: 8 + i / 100,
+            images: { webp: { large_image_url: 'https://example.com/' + (i + 1) + '.webp' } },
+            type: 'TV',
+            status: 'Currently Airing',
+            episodes: 12,
+            year: 2026,
+            aired: { prop: { from: { year: 2026 } } },
+            url: 'https://myanimelist.net/anime/' + (70000 + i)
+          }));
+          global.fetch = async () => ({
+            ok: true,
+            status: 200,
+            json: async () => ({ data: fixture })
+          });
+
+          new Function(match[1])();
+
+          setTimeout(() => {
+            if (!window.db) throw new Error('AniVote db was not exposed');
+            if (window.db.anime[0].t !== 'Jikan Anime 1') throw new Error('Jikan title mapping failed');
+            if (window.db.anime[0].studio !== 'Fixture Studio 1') throw new Error('Jikan studio mapping failed');
+            if (!window.db.anime[0].image.includes('example.com/1.webp')) throw new Error('Jikan image mapping failed');
+            if (!app.innerHTML.includes('Live Jikan data')) throw new Error('Jikan UI status did not render');
+            window.openPoll(101);
+            if (!app.innerHTML.includes('Jikan Anime 1')) throw new Error('Jikan anime did not render in poll UI');
+            window.togglePick(1, 10);
+            if (!app.innerHTML.includes('1 <span class="meta">/ 10</span>')) throw new Error('Voting selection behavior changed');
+            console.log('Jikan runtime mapping and voting behavior OK');
+          }, 100);
+
+          setTimeout(() => process.exit(0), 180);
           NODE
 
       - name: Static site smoke test

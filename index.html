@@ -125,6 +125,31 @@ function applyJikanAnime(items,updatedAt){
  jikanState.updated=updatedAt||Date.now();
  return true;
 }
+function wait(ms){return new Promise(function(resolve){setTimeout(resolve,ms)})}
+async function fetchJikanSeason(){
+ var lastError=null;
+ for(var attempt=1;attempt<=3;attempt++){
+  var controller=new AbortController();
+  var timer=setTimeout(function(){controller.abort()},12000);
+  try{
+   var res=await fetch(JIKAN_URL,{headers:{Accept:'application/json'},signal:controller.signal});
+   clearTimeout(timer);
+   if(res.ok){
+    var payload=await res.json();
+    if(payload&&Array.isArray(payload.data))return payload;
+    throw new Error('Unexpected Jikan response');
+   }
+   lastError=new Error('Jikan returned HTTP '+res.status);
+   if([429,500,502,503,504].indexOf(res.status)<0)throw lastError;
+  }catch(err){
+   clearTimeout(timer);
+   lastError=err;
+   if(attempt===3)break;
+  }
+  await wait(attempt*1200);
+ }
+ throw lastError||new Error('Jikan request failed');
+}
 async function syncJikanAnime(force){
  var cached=null;
  try{cached=JSON.parse(localStorage.getItem(JIKAN_CACHE_KEY)||'null')}catch(e){}
@@ -140,13 +165,7 @@ async function syncJikanAnime(force){
  jikanState.message='Fetching current-season anime metadata from Jikan…';
  render();
  try{
-  var controller=new AbortController();
-  var timer=setTimeout(function(){controller.abort()},12000);
-  var res=await fetch(JIKAN_URL,{headers:{Accept:'application/json'},signal:controller.signal});
-  clearTimeout(timer);
-  if(!res.ok)throw new Error('Jikan returned HTTP '+res.status);
-  var payload=await res.json();
-  if(!payload||!Array.isArray(payload.data))throw new Error('Unexpected Jikan response');
+  var payload=await fetchJikanSeason();
   if(!applyJikanAnime(payload.data,Date.now()))throw new Error('Not enough usable anime returned');
   localStorage.setItem(JIKAN_CACHE_KEY,JSON.stringify({at:jikanState.updated,data:payload.data}));
   jikanState.status='ready';

@@ -6,6 +6,8 @@ Anime community voting prototype with public poll flows and an administrative co
 
 https://benburnsred.github.io/anivote/
 
+Awards tier-list ballot prototype: https://benburnsred.github.io/anivote/awards/ ([details](awards/README.md))
+
 ## Features
 
 - Weekly, seasonal, and custom polls

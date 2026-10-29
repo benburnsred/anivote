@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0d0f1a">
+<title>AniVote Awards — Tier List Ballot</title>
+<style>
+:root{--bg:#0d0f1a;--panel:#161a2b;--panel2:#1d2236;--ink:#eef0ff;--muted:#9aa1c0;--line:#2a3150;--accent:#a99aff;--accent2:#7c5cff;
+--S:#ff5d7a;--A:#ff9f43;--B:#ffd43b;--C:#5ad18a;--D:#4dabf7;--good:#5ad18a;--bad:#ff5d7a}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.45 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:radial-gradient(1200px 600px at 80% -10%,#2c2452 0%,transparent 60%),var(--bg);min-height:100vh}
+button,input{font:inherit;color:inherit}
+.wrap{max-width:1100px;margin:auto;padding:20px 16px 80px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand{font-weight:900;font-size:20px;letter-spacing:.2px}.brand span{color:var(--accent)}
+.tabs{display:flex;gap:4px;background:var(--panel);padding:4px;border-radius:12px;border:1px solid var(--line)}
+.tabs button{border:0;background:transparent;padding:8px 14px;border-radius:9px;cursor:pointer;color:var(--muted);font-weight:700}
+.tabs button.on{background:var(--accent2);color:#fff}
+.hero{margin:22px 0 16px}
+.eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.14em;font-weight:900;color:var(--accent)}
+h1{font-size:30px;line-height:1.1;margin:6px 0 8px}
+.hero p{color:var(--muted);margin:0;max-width:720px}
+.mode{display:inline-block;margin-top:10px;font-size:12px;padding:4px 10px;border-radius:99px;background:var(--panel2);border:1px solid var(--line);color:var(--muted)}
+.mode b{color:var(--B)}.mode.live b{color:var(--good)}
+.cats{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
+.cats button{border:1px solid var(--line);background:var(--panel);padding:7px 12px;border-radius:99px;cursor:pointer;font-weight:700;color:var(--muted)}
+.cats button.on{border-color:var(--accent);color:#fff}
+.cats button .done{color:var(--good);margin-left:4px}
+.voter{display:flex;gap:10px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:14px}
+.voter label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted);font-weight:700;flex:1 1 200px}
+.voter input{background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:9px 11px;outline:none}
+.voter input:focus{border-color:var(--accent)}
+.hint{font-size:13px;color:var(--muted);margin:0 0 8px;min-height:20px}
+.hint b{color:#fff}
+.board{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--panel)}
+.tier{display:flex;min-height:96px;border-top:1px solid var(--line);transition:background .15s}
+.tier:first-child{border-top:0}
+.tier.over,.tier.target{background:#232a44}
+.tier.full.target{background:transparent}
+.label{width:78px;flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:900;color:#141625;gap:2px}
+.label .t{font-size:28px;line-height:1}.label .p{font-size:11px;font-weight:800;opacity:.75}.label .c{font-size:10px;font-weight:800;opacity:.75}
+.slots{flex:1;display:flex;flex-wrap:wrap;gap:8px;padding:8px;align-content:flex-start;cursor:pointer}
+.pool{margin-top:16px;background:var(--panel);border:1px dashed var(--line);border-radius:14px}
+.pool h3{margin:0;padding:10px 12px 0;font-size:13px;color:var(--muted)}
+.pool .slots{min-height:110px}
+.card{width:150px;height:80px;border-radius:10px;position:relative;overflow:hidden;cursor:grab;user-select:none;-webkit-user-select:none;background:linear-gradient(135deg,#3b2f7a,#1f2a4d);border:2px solid transparent;flex:none;box-shadow:0 4px 14px rgba(0,0,0,.35);transition:transform .12s,border-color .12s}
+.card:hover{transform:translateY(-2px)}
+.card.sel{border-color:#fff;transform:translateY(-2px) scale(1.03)}
+.card.dragging{opacity:.4}
+.card .img{position:absolute;inset:0;background-size:cover;background-position:center 25%;opacity:.55}
+.card .txt{position:absolute;inset:0;padding:7px 8px;display:flex;flex-direction:column;justify-content:flex-end;background:linear-gradient(transparent 10%,rgba(8,9,18,.92))}
+.card .song{font-weight:850;font-size:13px;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card .meta{font-size:10.5px;color:#c9cde6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card .play{position:absolute;top:5px;right:5px;width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.6);display:grid;place-items:center;font-size:10px;text-decoration:none;color:#fff;border:1px solid rgba(255,255,255,.25)}
+.card .play:hover{background:var(--accent2)}
+.actions{display:flex;gap:10px;justify-content:space-between;align-items:center;flex-wrap:wrap;margin-top:16px}
+.btn{border:0;border-radius:10px;padding:11px 18px;font-weight:800;cursor:pointer;background:var(--panel2);border:1px solid var(--line)}
+.btn.primary{background:var(--accent2);border-color:var(--accent2);color:#fff}
+.btn.primary:disabled{opacity:.45;cursor:not-allowed}
+.btn.sm{padding:7px 12px;font-size:12px}
+.score{color:var(--muted);font-size:13px}.score b{color:#fff}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(120px);background:#fff;color:#141625;padding:10px 16px;border-radius:10px;font-weight:750;transition:transform .25s;z-index:50;max-width:calc(100% - 32px);text-align:center}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.shake{animation:shake .3s}
+@keyframes shake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px}
+.done-box{text-align:center;padding:28px 16px}
+.done-box h2{margin:0 0 6px}
+.done-box p{color:var(--muted);margin:0 0 16px}
+canvas{max-width:100%;border-radius:12px;margin:8px auto 14px;display:block}
+.rank{display:grid;grid-template-columns:34px 1fr auto;gap:12px;align-items:center;padding:10px 4px;border-top:1px solid var(--line)}
+.rank:first-of-type{border-top:0}
+.rank .n{font-size:20px;font-weight:900;text-align:center;color:var(--muted)}
+.rank:nth-of-type(1) .n{color:var(--B)}.rank:nth-of-type(2) .n{color:#d0d4e4}.rank:nth-of-type(3) .n{color:var(--A)}
+.rank .name{font-weight:800}.rank .sub{font-size:12px;color:var(--muted)}
+.bar{height:6px;border-radius:9px;background:var(--panel2);margin-top:6px;overflow:hidden}.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--accent2),var(--S))}
+.pts{text-align:right;font-weight:900;font-size:18px}.pts small{display:block;font-size:11px;color:var(--muted);font-weight:700}
+.dist{display:flex;gap:3px;margin-top:4px}.dist span{font-size:10px;font-weight:800;padding:1px 5px;border-radius:4px;color:#141625}
+.rhead{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.rhead h2{margin:0;font-size:18px}
+.empty{color:var(--muted);text-align:center;padding:30px 10px}
+footer{margin-top:30px;color:var(--muted);font-size:12px;text-align:center}
+footer a{color:var(--accent)}
+@media (max-width:600px){h1{font-size:24px}.label{width:56px}.label .t{font-size:22px}.card{width:calc(50% - 4px);height:72px}.tier{min-height:88px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">Ani<span>Vote</span> Awards</div>
+    <nav class="tabs"><button data-view="vote" class="on">Vote</button><button data-view="results">Results</button></nav>
+  </header>
+
+  <section class="hero">
+    <div class="eyebrow">2026 Community Awards · Prototype</div>
+    <h1 id="catTitle">Anime Opening of the Year</h1>
+    <p id="catBlurb"></p>
+    <span class="mode" id="modeBadge"></span>
+  </section>
+
+  <div class="cats" id="cats"></div>
+
+  <main id="voteView">
+    <div class="voter">
+      <label>Your name<input id="voterName" placeholder="e.g. Ben" maxlength="40" autocomplete="nickname"></label>
+      <label>Voter code<input id="voterCode" placeholder="e.g. AWD-7Q2K" maxlength="20" autocomplete="off"></label>
+    </div>
+    <p class="hint" id="hint"></p>
+    <div class="board" id="board"></div>
+    <div class="pool" id="poolWrap"><h3>Nominees — tap ▶ to listen</h3><div class="slots" id="pool" data-tier=""></div></div>
+    <div class="actions">
+      <span class="score" id="progress"></span>
+      <div style="display:flex;gap:8px">
+        <button class="btn" id="resetBtn">Reset</button>
+        <button class="btn primary" id="submitBtn">Submit ballot</button>
+      </div>
+    </div>
+  </main>
+
+  <main id="doneView" hidden>
+    <div class="panel done-box">
+      <h2>Ballot submitted 🎉</h2>
+      <p id="doneMsg"></p>
+      <canvas id="shareCanvas" width="1080" height="1080"></canvas>
+      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+        <button class="btn primary" id="saveImg">Save my tier list</button>
+        <button class="btn" id="nextCat">Next category</button>
+        <button class="btn" id="seeResults">See results</button>
+      </div>
+    </div>
+  </main>
+
+  <main id="resultsView" hidden>
+    <div class="panel">
+      <div class="rhead">
+        <h2 id="resTitle">Results</h2>
+        <div style="display:flex;gap:8px">
+          <button class="btn sm" id="refreshRes">Refresh</button>
+          <button class="btn sm" id="seedBtn" hidden>Add 25 demo ballots</button>
+          <button class="btn sm" id="clearBtn" hidden>Clear demo data</button>
+        </div>
+      </div>
+      <div id="resList"></div>
+    </div>
+  </main>
+
+  <footer>Song data: Billboard JAPAN Hot Animation (H1 2026) and Anime Corner / Anime!Anime! seasonal polls. Cover art via <a href="https://jikan.moe" target="_blank" rel="noopener">Jikan</a> (MyAnimeList).</footer>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ===== Config ===== */
+// Paste your Apps Script web app URL here (see awards/README.md). Empty = demo mode (votes saved in this browser only).
+const APPS_SCRIPT_URL = '';
+
+// Points per tier and the max number of nominees allowed in each tier (0 = no limit).
+// Keep in sync with TIERS in apps-script/Code.gs, which re-checks every ballot.
+const TIERS = [
+  {id:'S', points:5, cap:1, color:'var(--S)'},
+  {id:'A', points:4, cap:2, color:'var(--A)'},
+  {id:'B', points:3, cap:3, color:'var(--B)'},
+  {id:'C', points:2, cap:0, color:'var(--C)'},
+  {id:'D', points:1, cap:0, color:'var(--D)'}
+];
+
+// Sample nominees: popular 2026 anime songs (chart and fan-poll picks). `q` is the Jikan search used for cover art.
+const CATEGORIES = [
+  {
+    id:'anime-opening',
+    title:'Anime Opening of the Year',
+    blurb:'Drag (or tap) each opening into a tier. S = 5 pts, A = 4, B = 3, C = 2, D = 1. Leave any you haven\'t heard in the pool — they score 0.',
+    nominees:[
+      {id:'iris-out', song:'IRIS OUT', artist:'Kenshi Yonezu', anime:'Chainsaw Man – The Movie: Reze Arc', q:'Chainsaw Man Movie Reze-hen'},
+      {id:'lulu', song:'lulu.', artist:'Mrs. GREEN APPLE', anime:'Frieren Season 2', q:'Sousou no Frieren 2nd Season'},
+      {id:'aizo', song:'AIZO', artist:'King Gnu', anime:'Jujutsu Kaisen Season 3', q:'Jujutsu Kaisen Shimetsu Kaiyuu'},
+      {id:'stella', song:'Stella', artist:'SEKAI NO OWARI', anime:'Jaadugar: A Witch in Mongolia', q:'Tenmaku no Jaadugar'},
+      {id:'hikari-no-uta', song:'Hikari no Uta', artist:'Yuiko Ohara', anime:'Mushoku Tensei Season 3', q:'Mushoku Tensei III'},
+      {id:'recollect', song:'Recollect', artist:'Konomi Suzuki feat. Ashnikko', anime:'Re:ZERO Season 4', q:'Re:Zero kara Hajimeru Isekai Seikatsu 4th Season'},
+      {id:'monster', song:'MONSTER', artist:'Eir Aoi', anime:'Classroom of the Elite IV', q:'Youkoso Jitsuryoku Shijou Shugi no Kyoushitsu e 4th Season'},
+      {id:'kasuka-na-hana', song:'Kasuka na Hana', artist:'Tatsuya Kitani feat. BABYMETAL', anime:'Hell\'s Paradise Season 2', q:'Jigokuraku 2nd Season'},
+      {id:'provant', song:'PROVANT', artist:'SawanoHiroyuki[nZk]', anime:'Fate/strange Fake', q:'Fate/strange Fake'},
+      {id:'sweet-magic', song:'Sweet Magic', artist:'F/ACE', anime:'Tamon\'s B-Side', q:'Tamon-kun Ima Docchi'}
+    ]
+  }
+];
+
+/* ===== State ===== */
+const LS = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+};
+const live = !!APPS_SCRIPT_URL;
+let catIdx = 0;
+let placements = LS.get('aw.drafts', {});   // {catId: {nomineeId: tierId}}
+let submitted = LS.get('aw.submitted', {}); // {catId: true}
+let covers = LS.get('aw.covers', {});       // {nomineeId: imageUrl}
+let selected = null;
+
+const $ = s => document.querySelector(s);
+const cat = () => CATEGORIES[catIdx];
+const draft = () => (placements[cat().id] ||= {});
+const tierOf = id => TIERS.find(t => t.id === id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 2200); }
+
+/* ===== Rendering ===== */
+function cardHTML(n){
+  const img = covers[n.id] ? `<div class="img" style="background-image:url('${esc(covers[n.id])}')"></div>` : '';
+  const yt = 'https://www.youtube.com/results?search_query=' + encodeURIComponent(`${n.anime} opening ${n.song} ${n.artist}`);
+  return `<div class="card${selected === n.id ? ' sel' : ''}" draggable="true" data-id="${n.id}" title="${esc(n.song)} — ${esc(n.artist)} (${esc(n.anime)})">
+    ${img}<div class="txt"><div class="song">${esc(n.song)}</div><div class="meta">${esc(n.anime)}</div><div class="meta">${esc(n.artist)}</div></div>
+    <a class="play" href="${yt}" target="_blank" rel="noopener" title="Listen on YouTube">▶</a></div>`;
+}
+
+function render(){
+  const c = cat(), d = draft();
+  $('#catTitle').textContent = c.title;
+  $('#catBlurb').textContent = c.blurb;
+  $('#modeBadge').className = 'mode' + (live ? ' live' : '');
+  $('#modeBadge').innerHTML = live ? '<b>●</b> Live — ballots go to Google Sheets' : '<b>●</b> Demo mode — ballots stay in this browser';
+  $('#cats').innerHTML = CATEGORIES.length > 1 ? CATEGORIES.map((x, i) =>
+    `<button data-i="${i}" class="${i === catIdx ? 'on' : ''}">${esc(x.title)}${submitted[x.id] ? '<span class="done">✓</span>' : ''}</button>`).join('') : '';
+
+  $('#board').innerHTML = TIERS.map(t => {
+    const items = c.nominees.filter(n => d[n.id] === t.id);
+    const full = t.cap && items.length >= t.cap;
+    return `<div class="tier${full ? ' full' : ''}${selected && !full ? ' target' : ''}" data-tier="${t.id}">
+      <div class="label" style="background:${t.color}"><span class="t">${t.id}</span><span class="p">${t.points} pt${t.points > 1 ? 's' : ''}</span>${t.cap ? `<span class="c">${items.length}/${t.cap}</span>` : ''}</div>
+      <div class="slots" data-tier="${t.id}">${items.map(cardHTML).join('')}</div></div>`;
+  }).join('');
+  $('#pool').innerHTML = c.nominees.filter(n => !d[n.id]).map(cardHTML).join('') || '<span class="score" style="padding:8px">All nominees placed ✨</span>';
+
+  const placed = Object.keys(d).length;
+  $('#progress').innerHTML = `<b>${placed}</b> of ${c.nominees.length} placed`;
+  $('#submitBtn').disabled = !placed;
+  const sel = selected && c.nominees.find(n => n.id === selected);
+  $('#hint').innerHTML = sel ? `Selected <b>${esc(sel.song)}</b> — tap a tier to place it, or the nominee pool to remove it.` : 'Drag a card into a tier, or tap a card then tap a tier.';
+}
+
+/* ===== Placement ===== */
+function place(id, tier){
+  const d = draft();
+  if (tier){
+    const t = tierOf(tier);
+    const count = cat().nominees.filter(n => d[n.id] === tier && n.id !== id).length;
+    if (t.cap && count >= t.cap){
+      toast(`${t.id} tier holds only ${t.cap}. Move one out first.`);
+      document.querySelector(`.tier[data-tier="${tier}"]`)?.classList.add('shake');
+      setTimeout(() => document.querySelector(`.tier[data-tier="${tier}"]`)?.classList.remove('shake'), 300);
+      return;
+    }
+    d[id] = tier;
+  } else delete d[id];
+  selected = null;
+  LS.set('aw.drafts', placements);
+  render();
+}
+
+document.addEventListener('click', e => {
+  if (e.target.closest('.play')) return;
+  const card = e.target.closest('.card');
+  if (card){ selected = selected === card.dataset.id ? null : card.dataset.id; render(); return; }
+  const slots = e.target.closest('.slots, .tier');
+  if (slots && selected){ place(selected, slots.dataset.tier || ''); return; }
+  const catBtn = e.target.closest('#cats button');
+  if (catBtn){ catIdx = +catBtn.dataset.i; selected = null; show('vote'); }
+});
+
+// Desktop drag & drop
+document.addEventListener('dragstart', e => { const c = e.target.closest('.card'); if (!c) return; e.dataTransfer.setData('text/plain', c.dataset.id); c.classList.add('dragging'); });
+document.addEventListener('dragend', e => e.target.closest?.('.card')?.classList.remove('dragging'));
+document.addEventListener('dragover', e => { const z = e.target.closest('.slots, .tier'); if (z){ e.preventDefault(); z.closest('.tier')?.classList.add('over'); } });
+document.addEventListener('dragleave', e => e.target.closest?.('.tier')?.classList.remove('over'));
+document.addEventListener('drop', e => {
+  const z = e.target.closest('.slots, .tier'); if (!z) return;
+  e.preventDefault(); document.querySelectorAll('.over').forEach(x => x.classList.remove('over'));
+  place(e.dataTransfer.getData('text/plain'), z.dataset.tier || '');
+});
+
+$('#resetBtn').onclick = () => { placements[cat().id] = {}; selected = null; LS.set('aw.drafts', placements); render(); };
+
+/* ===== Submit ===== */
+async function api(payload){
+  const res = await fetch(APPS_SCRIPT_URL, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(payload)});
+  return res.json();
+}
+
+$('#submitBtn').onclick = async () => {
+  const name = $('#voterName').value.trim(), code = $('#voterCode').value.trim().toUpperCase();
+  if (!name){ toast('Enter your name first.'); $('#voterName').focus(); return; }
+  if (live && !code){ toast('Enter your voter code.'); $('#voterCode').focus(); return; }
+  const d = draft();
+  const ballot = {action:'vote', voter:name, code, category:cat().id,
+    placements:Object.entries(d).map(([nominee, tier]) => ({nominee, tier}))};
+  const btn = $('#submitBtn'); btn.disabled = true; btn.textContent = 'Submitting…';
+  try {
+    if (live){
+      const r = await api(ballot);
+      if (!r.ok) throw new Error(r.error || 'Submission failed');
+    } else {
+      const all = LS.get('aw.ballots', []);
+      const key = (code || name).toLowerCase();
+      if (all.some(b => b.category === ballot.category && (b.code || b.voter).toLowerCase() === key)) throw new Error('This voter already submitted for this category.');
+      all.push({...ballot, at:Date.now()}); LS.set('aw.ballots', all);
+    }
+    submitted[cat().id] = true; LS.set('aw.submitted', submitted);
+    LS.set('aw.voter', {name, code});
+    $('#doneMsg').textContent = `Thanks ${name}! Your ${cat().title} ballot is in.`;
+    $('#nextCat').hidden = CATEGORIES.length < 2;
+    drawShare(name);
+    show('done');
+  } catch (err){ toast(err.message); }
+  finally { btn.disabled = false; btn.textContent = 'Submit ballot'; }
+};
+
+/* ===== Share image ===== */
+function drawShare(name){
+  const cv = $('#shareCanvas'), x = cv.getContext('2d'), W = 1080, H = 1080, d = draft(), c = cat();
+  const css = v => getComputedStyle(document.documentElement).getPropertyValue(v.slice(4, -1)).trim();
+  const g = x.createLinearGradient(0, 0, W, H); g.addColorStop(0, '#151c2d'); g.addColorStop(.55, '#2c2452'); g.addColorStop(1, '#6d55df');
+  x.fillStyle = g; x.fillRect(0, 0, W, H);
+  x.fillStyle = '#c7bcff'; x.font = '900 26px system-ui,sans-serif'; x.fillText('ANIVOTE AWARDS 2026', 60, 80);
+  x.fillStyle = '#fff'; x.font = '900 52px system-ui,sans-serif'; x.fillText(`${name}'s ${c.title.replace(' of the Year', '')}s`, 60, 145);
+  const top = 190, rowH = (H - top - 70) / TIERS.length;
+  TIERS.forEach((t, i) => {
+    const y = top + i * rowH;
+    x.fillStyle = css(t.color); x.fillRect(60, y, 110, rowH - 12);
+    x.fillStyle = '#141625'; x.font = '900 60px system-ui,sans-serif'; x.textAlign = 'center'; x.fillText(t.id, 115, y + rowH / 2 + 10); x.textAlign = 'left';
+    x.fillStyle = 'rgba(255,255,255,.08)'; x.fillRect(180, y, W - 240, rowH - 12);
+    const songs = c.nominees.filter(n => d[n.id] === t.id).map(n => n.song);
+    x.fillStyle = '#fff'; x.font = '800 30px system-ui,sans-serif';
+    let line = '', ly = y + 48;
+    songs.forEach((s, j) => {
+      const next = line ? line + '  ·  ' + s : s;
+      if (x.measureText(next).width > W - 280 && line){ x.fillText(line, 205, ly); line = s; ly += 40; } else line = next;
+    });
+    if (line) x.fillText(line, 205, ly);
+  });
+  x.fillStyle = 'rgba(255,255,255,.6)'; x.font = '700 22px system-ui,sans-serif'; x.fillText('Cast your vote · benburnsred.github.io/anivote/awards', 60, H - 30);
+}
+$('#saveImg').onclick = () => { const a = document.createElement('a'); a.download = `anivote-${cat().id}.png`; a.href = $('#shareCanvas').toDataURL('image/png'); a.click(); };
+$('#nextCat').onclick = () => { catIdx = (catIdx + 1) % CATEGORIES.length; show('vote'); };
+$('#seeResults').onclick = () => show('results');
+
+/* ===== Results ===== */
+function tally(ballots, c){
+  const rows = Object.fromEntries(c.nominees.map(n => [n.id, {n, points:0, voters:0, dist:{}}]));
+  ballots.filter(b => b.category === c.id).forEach(b => b.placements.forEach(p => {
+    const r = rows[p.nominee], t = tierOf(p.tier); if (!r || !t) return;
+    r.points += t.points; r.voters++; r.dist[t.id] = (r.dist[t.id] || 0) + 1;
+  }));
+  // Rank by points, then by count of S, A, B... placements as tiebreakers.
+  return Object.values(rows).sort((a, b) => b.points - a.points || TIERS.reduce((acc, t) => acc || (b.dist[t.id] || 0) - (a.dist[t.id] || 0), 0));
+}
+
+async function renderResults(){
+  const c = cat(), list = $('#resList');
+  $('#resTitle').textContent = c.title;
+  $('#seedBtn').hidden = $('#clearBtn').hidden = live;
+  list.innerHTML = '<div class="empty">Loading…</div>';
+  let rows, ballots;
+  try {
+    if (live){
+      const r = await (await fetch(APPS_SCRIPT_URL + '?action=results&category=' + encodeURIComponent(c.id))).json();
+      if (!r.ok) throw new Error(r.error || 'Could not load results');
+      ballots = r.ballots;
+      rows = c.nominees.map(n => { const s = r.results[n.id] || {points:0, voters:0, dist:{}}; return {n, ...s}; })
+        .sort((a, b) => b.points - a.points || TIERS.reduce((acc, t) => acc || (b.dist[t.id] || 0) - (a.dist[t.id] || 0), 0));
+    } else {
+      const all = LS.get('aw.ballots', []);
+      ballots = all.filter(b => b.category === c.id).length;
+      rows = tally(all, c);
+    }
+  } catch (err){ list.innerHTML = `<div class="empty">${esc(err.message)}</div>`; return; }
+  if (!ballots){ list.innerHTML = `<div class="empty">No ballots yet.${live ? '' : ' Submit one, or add demo ballots to preview the leaderboard.'}</div>`; return; }
+  const max = Math.max(1, rows[0].points);
+  list.innerHTML = `<p class="score" style="margin:0 0 6px">${ballots} ballot${ballots > 1 ? 's' : ''} · ranked by total points, ties broken by most S, then A…</p>` +
+    rows.map((r, i) => `<div class="rank"><div class="n">${i + 1}</div>
+      <div><div class="name">${esc(r.n.song)} <span class="sub">— ${esc(r.n.artist)}</span></div><div class="sub">${esc(r.n.anime)}</div>
+      <div class="bar"><i style="width:${r.points / max * 100}%"></i></div>
+      <div class="dist">${TIERS.filter(t => r.dist[t.id]).map(t => `<span style="background:${t.color}">${t.id}×${r.dist[t.id]}</span>`).join('')}</div></div>
+      <div class="pts">${r.points}<small>${r.voters} voter${r.voters === 1 ? '' : 's'}</small></div></div>`).join('');
+}
+
+$('#refreshRes').onclick = renderResults;
+$('#seedBtn').onclick = () => {
+  const all = LS.get('aw.ballots', []), c = cat();
+  for (let i = 0; i < 25; i++){
+    // Random ballot that respects tier caps; some nominees left unranked.
+    const pool = c.nominees.map(n => n.id).filter(() => Math.random() < .8).sort(() => Math.random() - .5);
+    const counts = {}, ps = [];
+    pool.forEach(id => {
+      const order = TIERS.slice().sort(() => Math.random() - .5);
+      const t = order.find(t => !t.cap || (counts[t.id] || 0) < t.cap);
+      counts[t.id] = (counts[t.id] || 0) + 1; ps.push({nominee:id, tier:t.id});
+    });
+    all.push({action:'vote', voter:'demo-' + Math.random().toString(36).slice(2, 7), code:'', category:c.id, placements:ps, at:Date.now()});
+  }
+  LS.set('aw.ballots', all); renderResults();
+};
+$('#clearBtn').onclick = () => { LS.set('aw.ballots', []); submitted = {}; LS.set('aw.submitted', {}); renderResults(); };
+
+/* ===== Views ===== */
+function show(v){
+  $('#voteView').hidden = v !== 'vote'; $('#doneView').hidden = v !== 'done'; $('#resultsView').hidden = v !== 'results';
+  document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.view === (v === 'done' ? 'vote' : v)));
+  if (v === 'results') renderResults(); else render();
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => show(b.dataset.view));
+
+/* ===== Cover art (Jikan, cached; rate limit ~3 req/s) ===== */
+async function loadCovers(){
+  for (const c of CATEGORIES) for (const n of c.nominees){
+    if (covers[n.id]) continue;
+    try {
+      const r = await fetch('https://api.jikan.moe/v4/anime?limit=1&q=' + encodeURIComponent(n.q));
+      const j = await r.json();
+      const url = j.data?.[0]?.images?.webp?.large_image_url || j.data?.[0]?.images?.jpg?.large_image_url;
+      if (url){ covers[n.id] = url; LS.set('aw.covers', covers); render(); }
+    } catch (e){}
+    await new Promise(r => setTimeout(r, 450));
+  }
+}
+
+const me = LS.get('aw.voter', null);
+if (me){ $('#voterName').value = me.name || ''; $('#voterCode').value = me.code || ''; }
+render();
+loadCovers();
+</script>
+</body>
+</html>

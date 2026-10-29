@@ -8,7 +8,7 @@
 <style>
 :root{--bg:#0d0f1a;--panel:#161a2b;--panel2:#1d2236;--ink:#eef0ff;--muted:#9aa1c0;--line:#2a3150;--accent:#a99aff;--accent2:#7c5cff;
 --S:#ff5d7a;--A:#ff9f43;--B:#ffd43b;--C:#5ad18a;--D:#4dabf7;--good:#5ad18a;--bad:#ff5d7a}
-*{box-sizing:border-box}
+*{box-sizing:border-box}[hidden]{display:none!important}
 body{margin:0;font:14px/1.45 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:radial-gradient(1200px 600px at 80% -10%,#2c2452 0%,transparent 60%),var(--bg);min-height:100vh}
 button,input{font:inherit;color:inherit}
 .wrap{max-width:1100px;margin:auto;padding:20px 16px 80px}
@@ -104,7 +104,7 @@ footer a{color:var(--accent)}
   <main id="voteView">
     <div class="voter">
       <label>Your name<input id="voterName" placeholder="e.g. Ben" maxlength="40" autocomplete="nickname"></label>
-      <label>Voter code<input id="voterCode" placeholder="e.g. AWD-7Q2K" maxlength="20" autocomplete="off"></label>
+      <label id="codeField">Voter code<input id="voterCode" placeholder="e.g. AWD-7Q2K" maxlength="20" autocomplete="off"></label>
     </div>
     <p class="hint" id="hint"></p>
     <div class="board" id="board"></div>
@@ -153,6 +153,9 @@ footer a{color:var(--accent)}
 /* ===== Config ===== */
 // Paste your Apps Script web app URL here (see awards/README.md). Empty = demo mode (votes saved in this browser only).
 const APPS_SCRIPT_URL = '';
+
+// true = voters also enter a one-time code from the Codes tab. false = name only (one ballot per name per category).
+const USE_VOTER_CODES = false;
 
 // Points per tier and the max number of nominees allowed in each tier (0 = no limit).
 // Keep in sync with TIERS in apps-script/Code.gs, which re-checks every ballot.
@@ -288,9 +291,9 @@ async function api(payload){
 }
 
 $('#submitBtn').onclick = async () => {
-  const name = $('#voterName').value.trim(), code = $('#voterCode').value.trim().toUpperCase();
+  const name = $('#voterName').value.trim(), code = USE_VOTER_CODES ? $('#voterCode').value.trim().toUpperCase() : '';
   if (!name){ toast('Enter your name first.'); $('#voterName').focus(); return; }
-  if (live && !code){ toast('Enter your voter code.'); $('#voterCode').focus(); return; }
+  if (USE_VOTER_CODES && live && !code){ toast('Enter your voter code.'); $('#voterCode').focus(); return; }
   const d = draft();
   const ballot = {action:'vote', voter:name, code, category:cat().id,
     placements:Object.entries(d).map(([nominee, tier]) => ({nominee, tier}))};
@@ -425,6 +428,7 @@ async function loadCovers(){
   }
 }
 
+$('#codeField').hidden = !USE_VOTER_CODES;
 const me = LS.get('aw.voter', null);
 if (me){ $('#voterName').value = me.name || ''; $('#voterCode').value = me.code || ''; }
 render();

@@ -41,7 +41,7 @@ Live (after merge to `main`): https://benburnsred.github.io/anivote/awards/
 | Timestamp | Voter | Code | Category | Nominee | Tier | Points |
 |---|---|---|---|---|---|---|
 
-`Codes` is optional:
+`Codes` is optional. By default the page asks for a name only (`USE_VOTER_CODES = false` in `index.html`) and the script allows one ballot per name per category. To use codes, set `USE_VOTER_CODES = true`:
 - Put voter codes in column A, one per row, and leave the other columns blank. Once any codes are listed, every ballot needs a valid code, and each code can vote once per category.
 - If you leave `Codes` empty, voting is open, with one ballot per voter name per category.
 

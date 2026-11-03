@@ -1,15 +1,19 @@
 /**
  * AniVote Awards — Google Sheets backend.
  *
- * Bound to a Google Sheet (Extensions → Apps Script). Deploy as a web app:
+ * Bound to a private Google Sheet (Extensions → Apps Script). Deploy as a web app:
  *   Execute as: Me · Who has access: Anyone
  * then paste the /exec URL into APPS_SCRIPT_URL in awards/index.html.
  *
- * Sheets (created automatically on first run of setup()):
- *   Votes — one row per voter per nominee: Timestamp | Voter | Code | Category | Nominee | Tier | Points
- *   Codes — optional voter codes: Code | Category | Used By | Used At
- *           Add codes in column A with the other columns blank; a row is appended each time a code
- *           votes in a category. Leave empty to allow open voting (one ballot per voter name per category).
+ * The web app only accepts ballots. It never returns sheet contents, voter names or your account
+ * details, and the Sheet itself stays private to you. Read results in the Results tab.
+ *
+ * Tabs (created by setup()):
+ *   Votes   — one row per voter per nominee: Timestamp | Voter | Code | Category | Nominee | Tier | Points
+ *   Results — live leaderboard formula over Votes (only you can see it)
+ *   Codes   — optional voter codes: Code | Category | Used By | Used At
+ *             Add codes in column A with the other columns blank; a row is appended each time a code
+ *             votes in a category. Leave empty for name-only voting (one ballot per name per category).
  */
 
 // Must match TIERS in awards/index.html. Points are always computed here, never trusted from the browser.
@@ -21,11 +25,18 @@ const TIERS = {
   D: {points: 1, cap: 0}
 };
 
-// Set to false to hide results from the public page until awards night (you can still read the Votes sheet).
-const SHOW_RESULTS = true;
+// Must match CATEGORIES in awards/index.html. Ballots naming anything else are rejected.
+const NOMINEES = {
+  'anime-opening': ['iris-out', 'lulu', 'aizo', 'stella', 'hikari-no-uta', 'recollect', 'monster',
+    'kasuka-na-hana', 'provant', 'sweet-magic']
+};
+
+// true = anyone with the page link can fetch the point totals (never names). Keep false until awards night.
+const SHOW_RESULTS = false;
 
 const VOTES = 'Votes';
 const CODES = 'Codes';
+const RESULTS = 'Results';
 
 function setup() {
   const ss = SpreadsheetApp.getActive();
@@ -35,15 +46,20 @@ function setup() {
   if (!ss.getSheetByName(CODES)) {
     ss.insertSheet(CODES).appendRow(['Code', 'Category', 'Used By', 'Used At']);
   }
+  if (!ss.getSheetByName(RESULTS)) {
+    ss.insertSheet(RESULTS).getRange('A1').setFormula(
+      '=QUERY(' + VOTES + '!A:G,"select D, E, sum(G), count(G) where D is not null group by D, E ' +
+      'order by D, sum(G) desc label D \'Category\', E \'Nominee\', sum(G) \'Points\', count(G) \'Voters\'",1)');
+  }
 }
 
 function doGet(e) {
   const p = (e && e.parameter) || {};
   if (p.action === 'results') {
-    if (!SHOW_RESULTS) return json({ok: false, error: 'Results are hidden until the awards night'});
+    if (!SHOW_RESULTS) return json({ok: false, error: 'Results will be revealed at the awards'});
     return json(results(p.category));
   }
-  return json({ok: true, service: 'anivote-awards'});
+  return json({ok: true});
 }
 
 function doPost(e) {
@@ -53,13 +69,16 @@ function doPost(e) {
   } catch (err) {
     return json({ok: false, error: 'Invalid request'});
   }
-  if (body.action !== 'vote') return json({ok: false, error: 'Unknown action'});
+  if (!body || body.action !== 'vote') return json({ok: false, error: 'Invalid request'});
 
-  // Serialize writes so two ballots arriving together can't both claim the same code.
+  // Serialize writes so two ballots arriving together can't both pass the duplicate check.
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(10000)) return json({ok: false, error: 'Busy — please try again'});
   try {
     return json(recordVote(body));
+  } catch (err) {
+    console.error(err);
+    return json({ok: false, error: 'Something went wrong — please try again'});
   } finally {
     lock.releaseLock();
   }
@@ -68,20 +87,21 @@ function doPost(e) {
 function recordVote(b) {
   setup();
   const ss = SpreadsheetApp.getActive();
-  const voter = String(b.voter || '').trim().slice(0, 40);
-  const code = String(b.code || '').trim().toUpperCase();
-  const category = String(b.category || '').trim();
+  const voter = String(b.voter || '').replace(/\s+/g, ' ').trim().slice(0, 40);
+  const code = String(b.code || '').trim().toUpperCase().slice(0, 20);
+  const category = String(b.category || '');
   const placements = Array.isArray(b.placements) ? b.placements : [];
-  if (!voter || !category) return {ok: false, error: 'Missing name or category'};
-  if (!placements.length) return {ok: false, error: 'Empty ballot'};
+  const allowed = NOMINEES[category];
+  if (!voter) return {ok: false, error: 'Please enter your name'};
+  if (!allowed) return {ok: false, error: 'Invalid ballot'};
+  if (!placements.length || placements.length > allowed.length) return {ok: false, error: 'Invalid ballot'};
 
-  // Validate tiers, caps and duplicates.
+  // Validate nominees, tiers, caps and duplicates.
   const counts = {};
   const seen = {};
   for (const p of placements) {
-    const t = TIERS[p.tier];
-    if (!t) return {ok: false, error: 'Unknown tier ' + p.tier};
-    if (seen[p.nominee]) return {ok: false, error: 'Nominee listed twice'};
+    const t = TIERS[p && p.tier];
+    if (!t || allowed.indexOf(p.nominee) < 0 || seen[p.nominee]) return {ok: false, error: 'Invalid ballot'};
     seen[p.nominee] = true;
     counts[p.tier] = (counts[p.tier] || 0) + 1;
     if (t.cap && counts[p.tier] > t.cap) return {ok: false, error: p.tier + ' tier allows only ' + t.cap};
@@ -95,20 +115,25 @@ function recordVote(b) {
     if (!known) return {ok: false, error: 'Unknown voter code'};
     const used = codeRows.some(r => String(r[0]).toUpperCase() === code && r[1] === category);
     if (used) return {ok: false, error: 'This code already voted in this category'};
-    codeSheet.appendRow([code, category, voter, new Date()]);
+    codeSheet.appendRow([cell(code), category, cell(voter), new Date()]);
   } else {
     const key = voter.toLowerCase();
     const votes = ss.getSheetByName(VOTES).getDataRange().getValues().slice(1);
-    if (votes.some(r => String(r[1]).toLowerCase() === key && r[3] === category)) {
+    if (votes.some(r => String(r[1]).replace(/^'/, '').toLowerCase() === key && r[3] === category)) {
       return {ok: false, error: 'You already voted in this category'};
     }
   }
 
   const now = new Date();
-  const rows = placements.map(p => [now, voter, code, category, String(p.nominee), p.tier, TIERS[p.tier].points]);
+  const rows = placements.map(p => [now, cell(voter), cell(code), category, p.nominee, p.tier, TIERS[p.tier].points]);
   const sheet = ss.getSheetByName(VOTES);
   sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, rows[0].length).setValues(rows);
   return {ok: true};
+}
+
+// Stops typed text such as "=IMPORTXML(...)" from being stored as a formula in your Sheet.
+function cell(s) {
+  return /^[=+\-@]/.test(s) ? "'" + s : s;
 }
 
 function results(category) {

@@ -22,7 +22,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;fl
 h1{font-size:30px;line-height:1.1;margin:6px 0 8px}
 .hero p{color:var(--muted);margin:0;max-width:720px}
 .mode{display:inline-block;margin-top:10px;font-size:12px;padding:4px 10px;border-radius:99px;background:var(--panel2);border:1px solid var(--line);color:var(--muted)}
-.mode b{color:var(--B)}.mode.live b{color:var(--good)}
+.mode b{color:var(--B)}
 .cats{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
 .cats button{border:1px solid var(--line);background:var(--panel);padding:7px 12px;border-radius:99px;cursor:pointer;font-weight:700;color:var(--muted)}
 .cats button.on{border-color:var(--accent);color:#fff}
@@ -93,7 +93,7 @@ footer a{color:var(--accent)}
   </header>
 
   <section class="hero">
-    <div class="eyebrow">2026 Community Awards · Prototype</div>
+    <div class="eyebrow" id="eyebrow">2026 Community Awards · Prototype</div>
     <h1 id="catTitle">Anime Opening of the Year</h1>
     <p id="catBlurb"></p>
     <span class="mode" id="modeBadge"></span>
@@ -157,6 +157,10 @@ const APPS_SCRIPT_URL = '';
 // true = voters also enter a one-time code from the Codes tab. false = name only (one ballot per name per category).
 const USE_VOTER_CODES = false;
 
+// Show the Results tab to voters. Defaults to on in demo mode and off once connected, so voters only see the ballot.
+// Live results also need SHOW_RESULTS = true in Code.gs.
+const SHOW_RESULTS_TAB = !APPS_SCRIPT_URL;
+
 // Points per tier and the max number of nominees allowed in each tier (0 = no limit).
 // Keep in sync with TIERS in apps-script/Code.gs, which re-checks every ballot.
 const TIERS = [
@@ -168,6 +172,7 @@ const TIERS = [
 ];
 
 // Sample nominees: popular 2026 anime songs (chart and fan-poll picks). `q` is the Jikan search used for cover art.
+// Keep ids in sync with NOMINEES in apps-script/Code.gs, which rejects anything else.
 const CATEGORIES = [
   {
     id:'anime-opening',
@@ -221,8 +226,8 @@ function render(){
   const c = cat(), d = draft();
   $('#catTitle').textContent = c.title;
   $('#catBlurb').textContent = c.blurb;
-  $('#modeBadge').className = 'mode' + (live ? ' live' : '');
-  $('#modeBadge').innerHTML = live ? '<b>●</b> Live — ballots go to Google Sheets' : '<b>●</b> Demo mode — ballots stay in this browser';
+  $('#modeBadge').hidden = live;
+  $('#modeBadge').innerHTML = '<b>●</b> Demo mode — ballots stay in this browser';
   $('#cats').innerHTML = CATEGORIES.length > 1 ? CATEGORIES.map((x, i) =>
     `<button data-i="${i}" class="${i === catIdx ? 'on' : ''}">${esc(x.title)}${submitted[x.id] ? '<span class="done">✓</span>' : ''}</button>`).join('') : '';
 
@@ -429,6 +434,8 @@ async function loadCovers(){
 }
 
 $('#codeField').hidden = !USE_VOTER_CODES;
+$('.tabs').hidden = $('#seeResults').hidden = !SHOW_RESULTS_TAB;
+if (live) $('#eyebrow').textContent = '2026 Community Awards';
 const me = LS.get('aw.voter', null);
 if (me){ $('#voterName').value = me.name || ''; $('#voterCode').value = me.code || ''; }
 render();

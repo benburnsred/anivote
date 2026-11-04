@@ -94,27 +94,46 @@ function setup() {
 
 /* ===== Sheet helpers ===== */
 
+// Reading a tab is the slow part of every request, so each tab is read at most once per request and the copy is
+// dropped whenever that tab is written. (Apps Script starts every request with fresh globals.)
+const CACHE = {tables: {}, sheets: {}, votes: null};
+
 function sheet(name) {
-  return SpreadsheetApp.getActive().getSheetByName(name);
+  if (!(name in CACHE.sheets)) CACHE.sheets[name] = SpreadsheetApp.getActive().getSheetByName(name);
+  return CACHE.sheets[name];
 }
 
 function readTable(name) {
-  const values = sheet(name).getDataRange().getValues();
-  const head = values.shift().map(String);
-  return values.filter(r => r.some(v => v !== '')).map(r => {
-    const o = {};
-    head.forEach((h, i) => o[h] = r[i] instanceof Date ? r[i].toISOString() : typeof r[i] === 'boolean' ? (r[i] ? 'TRUE' : 'FALSE') : String(r[i]));
-    return o;
-  });
+  if (!CACHE.tables[name]) {
+    const values = sheet(name).getDataRange().getValues();
+    const head = values.shift().map(String);
+    CACHE.tables[name] = values.filter(r => r.some(v => v !== '')).map(r => {
+      const o = {};
+      head.forEach((h, i) => o[h] = r[i] instanceof Date ? r[i].toISOString() : typeof r[i] === 'boolean' ? (r[i] ? 'TRUE' : 'FALSE') : String(r[i]));
+      return o;
+    });
+  }
+  return CACHE.tables[name].map(o => Object.assign({}, o)); // copies, so callers can edit rows freely
+}
+
+function forget(name) {
+  delete CACHE.tables[name];
+  if (name === 'Categories' || name === 'Nominees' || name === 'VotesMapping' || name === 'Settings') CACHE.votes = null;
+}
+
+function appendRow(name, row) {
+  sheet(name).appendRow(row);
+  forget(name);
 }
 
 function writeTable(name, headers, rows) {
   const sh = sheet(name);
-  sh.clearContents();
   const data = [headers].concat(rows.map(o => headers.map(h => o[h] === undefined ? '' : cell(String(o[h])))));
+  const old = sh.getLastRow();
   // Plain text, so Sheets doesn't turn "TRUE" into a checkbox or a date string into a date.
-  sh.getRange(1, 1, Math.max(data.length, sh.getMaxRows()), headers.length).setNumberFormat('@');
-  sh.getRange(1, 1, data.length, headers.length).setValues(data);
+  sh.getRange(1, 1, data.length, headers.length).setNumberFormat('@').setValues(data);
+  if (old > data.length) sh.getRange(data.length + 1, 1, old - data.length, Math.max(headers.length, sh.getLastColumn())).clearContent();
+  forget(name);
 }
 
 // Stops typed text such as "=IMPORTXML(...)" from being stored as a formula in the Sheet.
@@ -150,6 +169,7 @@ function json(obj) {
 
 // The votes tab, and which column header holds each field.
 function votesSource() {
+  if (CACHE.votes && CACHE.votes.src) return CACHE.votes.src;
   const s = settingsMap();
   const ss = s.votes_sheet_id ? SpreadsheetApp.openById(s.votes_sheet_id.trim()) : SpreadsheetApp.getActive();
   const tab = (s.votes_tab || 'Votes').trim();
@@ -163,7 +183,8 @@ function votesSource() {
   VOTE_FIELDS.forEach((f, i) => map[f] = TABS.Votes[i]);
   readTable('VotesMapping').forEach(r => { if (r.field && r.column) map[r.field.trim().toLowerCase()] = r.column.trim(); });
   const head = sh.getLastColumn() ? sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(h => String(h).trim()) : [];
-  return {ss: ss, sheet: sh, map: map, head: head};
+  CACHE.votes = {src: {ss: ss, sheet: sh, map: map, head: head}};
+  return CACHE.votes.src;
 }
 
 // Every vote row as {timestamp, voter, code, category, nominee, value, points}. Category and nominee may be stored as
@@ -171,23 +192,28 @@ function votesSource() {
 // and anything else counts as 1 point.
 function readVotes() {
   const src = votesSource();
+  if (CACHE.votes.rows) return CACHE.votes.rows;
   const idx = {};
   VOTE_FIELDS.forEach(f => idx[f] = src.head.indexOf(src.map[f]));
-  const cats = readTable('Categories'), noms = readTable('Nominees');
+  // Lookups by id or lower-cased name, built once instead of searching for every vote row.
+  const catBy = {}, nomBy = {};
+  readTable('Categories').forEach(c => { catBy[c.id] = c; catBy[c.name.toLowerCase()] = c; });
+  readTable('Nominees').forEach(n => { nomBy[n.category_id + '|' + n.id] = n; nomBy[n.category_id + '|' + n.name.toLowerCase()] = n; });
   const values = src.sheet.getDataRange().getValues().slice(1);
-  return values.filter(r => r.some(v => v !== '')).map(r => {
+  CACHE.votes.rows = values.filter(r => r.some(v => v !== '')).map(r => {
     const o = {};
     VOTE_FIELDS.forEach(f => {
       const v = idx[f] >= 0 ? r[idx[f]] : '';
       o[f] = v instanceof Date ? v.toISOString() : String(v).replace(/^'/, '').trim();
     });
-    const c = cats.find(x => x.id === o.category || x.name.toLowerCase() === o.category.toLowerCase());
+    const c = catBy[o.category] || catBy[o.category.toLowerCase()];
     if (c) o.category = c.id;
-    const n = noms.find(x => x.category_id === o.category && (x.id === o.nominee || x.name.toLowerCase() === o.nominee.toLowerCase()));
+    const n = nomBy[o.category + '|' + o.nominee] || nomBy[o.category + '|' + o.nominee.toLowerCase()];
     if (n) o.nominee = n.id;
     if (o.points === '') o.points = String(TIERS[o.value.toUpperCase()] ? TIERS[o.value.toUpperCase()].points : 1);
     return o;
   });
+  return CACHE.votes.rows;
 }
 
 // A sheet with its own (re-mapped) category/nominee columns gets readable names; the built-in layout stores ids.
@@ -204,6 +230,7 @@ function appendVotes(list) {
     return f ? o[f] : '';
   }));
   src.sheet.getRange(src.sheet.getLastRow() + 1, 1, rows.length, src.head.length).setValues(rows);
+  CACHE.votes.rows = null;
 }
 
 /* ===== Web app ===== */
@@ -307,7 +334,7 @@ function recordVote(b) {
     if (codeRows.some(r => String(r[0]).toUpperCase() === code && r[1] === categoryId)) {
       return {ok: false, error: 'This code already voted in this category'};
     }
-    sheet('Codes').appendRow([cell(code), categoryId, cell(voter), new Date()]);
+    appendRow('Codes', [cell(code), categoryId, cell(voter), new Date()]);
   } else {
     const key = voter.toLowerCase();
     if (readVotes().some(v => v.voter.toLowerCase() === key && v.category === categoryId)) {
@@ -357,7 +384,7 @@ function requireCommittee() {
 }
 
 function log(email, action, details) {
-  sheet('Log').appendRow([new Date(), email, action, cell(String(details || '').slice(0, 500))]);
+  appendRow('Log', [new Date(), email, action, cell(String(details || '').slice(0, 500))]);
 }
 
 function adminState() {
@@ -629,8 +656,8 @@ function committeePropose(p) {
     const dup = props.some(x => x.status === 'open' && x.kind === kind && x.category_ref === ref && x.title.toLowerCase() === title.toLowerCase());
     if (dup) throw new Error('That has already been proposed. Vote on it instead.');
     const id = newId();
-    sheet('Proposals').appendRow([id, kind, ref, cell(title), JSON.stringify(details), m.email, new Date().toISOString(), 'open', '']);
-    sheet('ProposalVotes').appendRow([id, m.email, 'up', new Date().toISOString()]); // proposers back their own idea
+    appendRow('Proposals', [id, kind, ref, cell(title), JSON.stringify(details), m.email, new Date().toISOString(), 'open', '']);
+    appendRow('ProposalVotes', [id, m.email, 'up', new Date().toISOString()]); // proposers back their own idea
     log(m.email, 'propose ' + kind, title);
     return committeeState();
   });
@@ -655,7 +682,7 @@ function committeeComment(id, text) {
     if (!readTable('Proposals').some(x => x.id === id)) throw new Error('Proposal not found');
     const t = String(text || '').trim().slice(0, 1000);
     if (!t) throw new Error('Write something first');
-    sheet('Comments').appendRow([newId(), id, m.email, cell(t), new Date().toISOString()]);
+    appendRow('Comments', [newId(), id, m.email, cell(t), new Date().toISOString()]);
     return committeeState();
   });
 }

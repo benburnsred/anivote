@@ -41,6 +41,10 @@ h2{font-size:15px;margin:20px 0 10px}
 ul{margin:6px 0 0;padding-left:18px}
 #toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#16141c;color:#fff;padding:9px 14px;border-radius:6px;display:none;max-width:90%}
 #toast.err{background:var(--bad)}
+#saving{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:20;background:#a8761f;color:#fff;font-weight:700;font-size:13px;padding:7px 16px;border-radius:99px;box-shadow:0 6px 20px rgba(0,0,0,.25)}
+#saving::before{content:"";display:inline-block;width:10px;height:10px;margin-right:8px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;vertical-align:-1px;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+body.busy main{pointer-events:none;opacity:.75;transition:opacity .2s}
 </style>
 </head>
 <body>
@@ -48,16 +52,26 @@ ul{margin:6px 0 0;padding-left:18px}
 <nav id="tabs"><button data-tab="open" class="on">Open proposals</button><button data-tab="new">Propose</button><button data-tab="ballot">Official ballot</button><button data-tab="closed">Decided</button></nav>
 <main id="main"><p class="note">Loading…</p></main>
 <div id="toast"></div>
+<div id="saving" hidden>Saving…</div>
 
 <script>
 let STATE = null, TAB = 'open', FILTER = '', OPENC = {};
 const $ = s => document.querySelector(s);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function toast(msg, err){ const t = $('#toast'); t.textContent = msg; t.className = err ? 'err' : ''; t.style.display = 'block'; clearTimeout(t._h); t._h = setTimeout(() => t.style.display = 'none', err ? 6000 : 2500); }
+// Calls a server function and re-renders with the returned state. A "Saving…" badge shows straight away, and the
+// page ignores clicks until the save finishes so nothing is sent twice.
+let BUSY = 0;
+function busy(d){
+  BUSY += d;
+  document.body.classList.toggle('busy', BUSY > 0);
+  $('#saving').hidden = BUSY <= 0;
+}
 function call(fn, ...args){
+  busy(1);
   return new Promise(resolve => google.script.run
-    .withSuccessHandler(s => { STATE = s; render(); resolve(s); })
-    .withFailureHandler(e => { toast(e.message || String(e), true); resolve(null); })[fn](...args));
+    .withSuccessHandler(s => { busy(-1); STATE = s; render(); resolve(s); })
+    .withFailureHandler(e => { busy(-1); toast(e.message || String(e), true); resolve(null); })[fn](...args));
 }
 const methodText = (m, n) => (STATE.methods[m] || STATE.methods.tier).replace('N', n || 3);
 // Name of the category a proposal belongs to: an official one, or another (proposed) category.
@@ -140,7 +154,14 @@ document.addEventListener('click', e => {
   const t = e.target.closest('button'); if (!t) return;
   if (t.dataset.tab){ TAB = t.dataset.tab; render(); return; }
   if ('filter' in t.dataset){ FILTER = t.dataset.filter; render(); return; }
-  if (t.dataset.vote){ const p = STATE.proposals.find(x => x.id === t.dataset.id); call('committeeVote', p.id, p.mine === t.dataset.vote ? '' : t.dataset.vote); return; }
+  if (t.dataset.vote){
+    const p = STATE.proposals.find(x => x.id === t.dataset.id), next = p.mine === t.dataset.vote ? '' : t.dataset.vote;
+    // Show the new count right away; the server's answer replaces it a moment later.
+    if (p.mine) p[p.mine]--;
+    if (next) p[next]++;
+    p.mine = next; render();
+    call('committeeVote', p.id, next); return;
+  }
   if (t.dataset.toggle){ OPENC[t.dataset.toggle] = !OPENC[t.dataset.toggle]; render(); return; }
   if (t.dataset.withdraw){ if (confirm('Withdraw your proposal?')) call('committeeWithdraw', t.dataset.withdraw); }
 });

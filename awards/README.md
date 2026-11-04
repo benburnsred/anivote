@@ -224,3 +224,14 @@ The Settings tab shows which fields are still unmapped. New ballots are written 
 ## Moving to its own repository
 
 Everything here is self-contained: pages link to each other with relative paths, and nothing refers to the repo name. To give the awards their own repo (e.g. `awards`, owned by animexangas), split out only this folder with its history: `git subtree split --prefix=awards -b awards-only`. Push that branch as `main` of the new repo, and copy `.github/workflows/pages.yml` there with every `awards/` path prefix removed. The AniVote polls page (repo root `index.html`) stays behind.
+
+## Hosting
+
+- **Now (testing and development):** the Google Sheet and Apps Script run on the repo owner's personal Google account.
+- **Production:** everything moves to **animexangas@gmail.com**: the Sheet, the Apps Script deployments and, later, this repository (as its own `awards` repo).
+
+To move the Sheet:
+1. Transfer ownership of the Sheet (Share → *Transfer ownership*), or make a fresh copy under animexangas.
+2. Signed in as animexangas, create both web app deployments again. Deployments run as the account that made them, so the URLs change.
+3. Update `APPS_SCRIPT_URL` and the published CSV links in `vote/index.html` and the edition's `index.html`.
+4. Clear test data (`Votes`, `Proposals`, `ProposalVotes`, `Comments`, `Log`) before launch.

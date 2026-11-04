@@ -34,6 +34,9 @@ def get_json(url, body=None):
             return json.load(r)
     except urllib.error.HTTPError as e:
         return json.load(e) if e.code == 404 else None  # AniList answers "not found" with a 404 body
+    except Exception as e:  # service down or unreachable: treat as "not found" and carry on
+        print(f'  {urllib.parse.urlparse(url).netloc} unavailable: {e}')
+        return None
 
 
 def anilist(title):
@@ -87,6 +90,7 @@ def main():
                     url = anilist(title)
                     time.sleep(2.1)  # AniList allows ~30 requests a minute
                     if not url:
+                        print(f'  AniList has no match for {title!r}, trying Jikan')
                         url = jikan(title)
                         time.sleep(1)
                     try:

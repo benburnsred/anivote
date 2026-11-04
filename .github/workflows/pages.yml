@@ -43,7 +43,8 @@ jobs:
         run: |
           PENDING="$(python3 awards/tools/upscale_avatars.py --pending)"
           if [ -z "$PENDING" ]; then echo "avatars: nothing to upscale"; exit 0; fi
-          pip install -q torch --index-url https://download.pytorch.org/whl/cpu
+          # torch and torchvision must come from the same (CPU) index, or spandrel's torchvision import fails.
+          pip install -q torch torchvision --index-url https://download.pytorch.org/whl/cpu
           pip install -q spandrel pillow numpy
           mkdir -p /tmp/esrgan
           curl -fsSL -o /tmp/esrgan/RealESRGAN_x4plus_anime_6B.pth https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.2.4/RealESRGAN_x4plus_anime_6B.pth

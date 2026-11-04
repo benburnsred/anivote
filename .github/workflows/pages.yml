@@ -6,9 +6,13 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write  # lets the cover-art step commit downloaded images back to main
   pages: write
   id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -19,6 +23,19 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      # Download cover art for awards nominees into the repo, so pages don't depend on anime APIs at runtime.
+      # A failure here never blocks the deploy; pages fall back to looking covers up in the browser.
+      - name: Fetch awards cover art
+        continue-on-error: true
+        run: |
+          python3 awards/tools/fetch_covers.py
+          if [ -n "$(git status --porcelain awards)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+            git add awards
+            git commit -m "Add awards cover art"
+            git push
+          fi
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload site

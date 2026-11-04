@@ -41,7 +41,8 @@ jobs:
       - name: Upscale awards avatars
         continue-on-error: true
         run: |
-          if [ -z "$(python3 awards/tools/upscale_avatars.py --pending)" ]; then echo "avatars: nothing to upscale"; exit 0; fi
+          PENDING="$(python3 awards/tools/upscale_avatars.py --pending)"
+          if [ -z "$PENDING" ]; then echo "avatars: nothing to upscale"; exit 0; fi
           pip install -q torch --index-url https://download.pytorch.org/whl/cpu
           pip install -q spandrel pillow numpy
           mkdir -p /tmp/esrgan

@@ -13,8 +13,6 @@ import glob
 import os
 import sys
 
-from PIL import Image, ImageDraw
-
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # awards/
 SCALE = 4
 MODELS = os.environ.get('MODELS_DIR', '/tmp/esrgan')
@@ -42,6 +40,7 @@ def load_models():
 def upscale(img, model):
     import numpy as np
     import torch
+    from PIL import Image
     t = torch.from_numpy(np.asarray(img, dtype=np.float32) / 255).permute(2, 0, 1).unsqueeze(0)
     out = model(t).clamp(0, 1).squeeze(0).permute(1, 2, 0).numpy()
     return Image.fromarray((out * 255).round().astype('uint8'))
@@ -55,6 +54,7 @@ def main():
     if not todo:
         print('avatars: nothing to upscale')
         return 0
+    from PIL import Image, ImageDraw  # only needed for real work, so --pending runs without Pillow
     dry = '--dry' in sys.argv
     models = None if dry else load_models()
     done = {}

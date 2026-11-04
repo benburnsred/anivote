@@ -6,7 +6,7 @@ Anime community voting prototype with public poll flows and an administrative co
 
 https://benburnsred.github.io/anivote/
 
-Awards site: https://benburnsred.github.io/anivote/awards/ · ballot: https://benburnsred.github.io/anivote/awards/vote/ ([details](awards/README.md))
+Awards 2025: https://benburnsred.github.io/anivote/awards/2025/ · latest awards: https://benburnsred.github.io/anivote/awards/ · ballot: https://benburnsred.github.io/anivote/awards/vote/ ([details](awards/README.md))
 
 ## Features
 

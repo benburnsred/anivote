@@ -4,8 +4,8 @@ tagline,Celebrating the year's best in anime and the AxA community.
 date,
 venue,
 stream_url,
-vote_url,vote/
-vote_open,TRUE
+vote_url,../vote/
+vote_open,FALSE
 reveal_winners,TRUE
 show_results,FALSE
-trophy_image,img/trophy.webp
+trophy_image,../img/trophy.webp

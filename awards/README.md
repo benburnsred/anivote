@@ -2,12 +2,15 @@
 
 | Page | URL | What it is |
 |---|---|---|
-| Awards site | https://benburnsred.github.io/anivote/awards/ | Public page: event info, countdown, categories, nominees, winners |
+| Awards 2025 | https://benburnsred.github.io/anivote/awards/2025/ | Permanent page for the 2025 edition: categories, nominees, winners |
+| Latest awards | https://benburnsred.github.io/anivote/awards/ | Forwards to the newest edition (currently 2025) |
 | Ballot | https://benburnsred.github.io/anivote/awards/vote/ | Tier-list voting, saved to a private Google Sheet |
 
-# Awards site (`awards/index.html`)
+# Awards site (`awards/<year>/index.html`)
 
-Everything on the page comes from two tables, so you never edit code to change it:
+Each edition lives in its own folder (`awards/2025/`) with its own copy of the page and data, so it stays exactly as it is when the next year's page is built or redesigned. Shared images such as the trophy live in `awards/img/`.
+
+Everything on a year's page comes from two tables in its folder, so you never edit code to change it:
 - `data/nominees.csv`: categories and nominees
 - `data/settings.csv`: event details
 
@@ -41,7 +44,7 @@ Two columns, `key` and `value`:
 | `date` | 2026-12-20T19:00:00+08:00 | Date line and countdown. Blank = "Date to be announced". Include the time zone offset |
 | `venue` | Online · YouTube | Shown next to the date |
 | `stream_url` | https://youtube.com/live/… | Shows a **Watch live** button |
-| `vote_url` | vote/ | Where **Vote now** goes |
+| `vote_url` | ../vote/ | Where **Vote now** goes |
 | `vote_open` | TRUE | Show or hide the **Vote now** buttons |
 | `reveal_winners` | FALSE | Turn on at the ceremony. Winners get a gold highlight and move to the front |
 | `show_results` | FALSE | Show the `result` text (points, percentages) |
@@ -49,14 +52,22 @@ Two columns, `key` and `value`:
 
 For a live ceremony, set `reveal_winners` to TRUE and fill in each `winner` cell as you announce it. As soon as one winner is revealed, a **The Winners** summary appears under the title, with one card per award linking to its full category, and the hero button changes to **See the winners**.
 
-**After the awards:** keep `reveal_winners` TRUE, set `vote_open` to FALSE to hide the vote buttons, and optionally set `show_results` to TRUE with points or percentages in the `result` column. The page then works as a permanent results page. Open pages re-check the sheet every 60 seconds, and Google's published copy can lag by a few minutes.
+**After the awards:** keep `reveal_winners` TRUE, set `vote_open` to FALSE to hide the vote buttons, and optionally set `show_results` to TRUE with points or percentages in the `result` column. If the page was reading a Google Sheet, export both tabs as CSV into the year's `data/` folder and point `NOMINEES_CSV` / `SETTINGS_CSV` back at them, so the archive no longer depends on the Sheet.
+
+## Starting next year's edition
+
+1. Copy `awards/2025/` to `awards/2026/`.
+2. Replace `awards/2026/data/nominees.csv` with the new categories (or point it at a new Google Sheet) and update `settings.csv`: new `title`, `date`, `reveal_winners` FALSE, `vote_open` TRUE.
+3. In `awards/index.html`, change the three `2025/` links to `2026/` so `/awards/` forwards to the new edition.
+
+`/awards/2025/` keeps working unchanged.
 
 ## Managing it from Google Sheets
 
 1. Create a **new** Google Sheet just for the awards content. Don't use the one that stores votes.
-2. Make two tabs, `Nominees` and `Settings`. Import [`data/nominees.csv`](data/nominees.csv) and [`data/settings.csv`](data/settings.csv) as starting templates (**File → Import → Upload → Replace current sheet**).
+2. Make two tabs, `Nominees` and `Settings`. Import [`2025/data/nominees.csv`](2025/data/nominees.csv) and [`2025/data/settings.csv`](2025/data/settings.csv) as starting templates (**File → Import → Upload → Replace current sheet**).
 3. Go to **File → Share → Publish to web**, choose the `Nominees` tab and **Comma-separated values (.csv)**, then click **Publish** and copy the link. Do the same for `Settings`.
-4. Paste the two links into `NOMINEES_CSV` and `SETTINGS_CSV` at the top of `awards/index.html` (or send them to me).
+4. Paste the two links into `NOMINEES_CSV` and `SETTINGS_CSV` at the top of that year's `awards/<year>/index.html` (or send them to me).
 
 Only the two published tabs become public, and only you can edit them. Anything you type there is what visitors see.
 

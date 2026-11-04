@@ -3,7 +3,7 @@
  *
  * Bound to a private Google Sheet (Extensions → Apps Script). Deploy as a web app:
  *   Execute as: Me · Who has access: Anyone
- * then paste the /exec URL into APPS_SCRIPT_URL in awards/index.html.
+ * then paste the /exec URL into APPS_SCRIPT_URL in awards/vote/index.html.
  *
  * The web app only accepts ballots. It never returns sheet contents, voter names or your account
  * details, and the Sheet itself stays private to you. Read results in the Results tab.
@@ -16,7 +16,7 @@
  *             votes in a category. Leave empty for name-only voting (one ballot per name per category).
  */
 
-// Must match TIERS in awards/index.html. Points are always computed here, never trusted from the browser.
+// Must match TIERS in awards/vote/index.html. Points are always computed here, never trusted from the browser.
 const TIERS = {
   S: {points: 5, cap: 1},
   A: {points: 4, cap: 2},
@@ -25,7 +25,7 @@ const TIERS = {
   D: {points: 1, cap: 0}
 };
 
-// Must match CATEGORIES in awards/index.html. Ballots naming anything else are rejected.
+// Must match CATEGORIES in awards/vote/index.html. Ballots naming anything else are rejected.
 const NOMINEES = {
   'anime-opening': ['iris-out', 'lulu', 'aizo', 'stella', 'hikari-no-uta', 'recollect', 'monster',
     'kasuka-na-hana', 'provant', 'sweet-magic']

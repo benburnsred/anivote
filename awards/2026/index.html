@@ -129,6 +129,9 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:100;op
 /* Winner spotlight */
 .stage{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:22px;align-items:stretch}
 .stage.solo{grid-template-columns:minmax(0,760px);justify-content:center}
+.stage.multi{grid-template-columns:repeat(var(--n),minmax(0,1fr))}.stage.multi .list{grid-column:1/-1}
+.stage.multi .win{min-height:0;flex-direction:column;align-items:stretch}.stage.multi .win .poster{position:relative;inset:auto;transform:none;width:72%;margin:24px auto 0;font-size:48px}
+.stage.multi .win .body{max-width:none;text-align:center;padding:18px 16px 22px}.stage.multi .win .name{font-size:clamp(20px,2.4vw,30px)}
 .win{position:relative;border-radius:0;overflow:hidden;min-height:440px;display:flex;align-items:flex-end;text-decoration:none;isolation:isolate;box-shadow:0 0 0 1px rgba(233,196,106,.55),0 40px 80px -30px rgba(0,0,0,.9),0 0 80px -20px rgba(233,196,106,.35)}
 .win .blur{position:absolute;inset:-40px;z-index:-2;background:linear-gradient(150deg,color-mix(in srgb,var(--c) 50%,#1a1828),#0c0b14);background-size:cover;background-position:center;filter:blur(36px) saturate(1.3) brightness(.55);transform:scale(1.1)}
 .win::before{content:"";position:absolute;inset:0;z-index:-1;background:radial-gradient(70% 60% at 30% 100%,rgba(6,6,11,.2),rgba(6,6,11,.85))}
@@ -167,6 +170,7 @@ footer .links a{color:var(--muted);text-decoration:none;margin:0 10px}
 footer .links a:hover{color:var(--gold)}
 
 @media (max-width:860px){
+  .stage.multi{grid-template-columns:1fr}.stage.multi .win .poster{width:58%}
   .stage{grid-template-columns:1fr}
   .win{min-height:0;flex-direction:column;align-items:stretch}
   .win .poster{position:relative;inset:auto;transform:none;width:58%;margin:26px auto 0;font-size:48px}
@@ -322,7 +326,8 @@ function capHTML(n){
 }
 
 function stageHTML(c, showRes){
-  const w = c.noms.find(n => n.winner), rest = c.noms.filter(n => n !== w), u = img(w), tag = w.link ? 'a' : 'div';
+  // Several winners (e.g. a top three) share the stage; everyone else goes in the nominee list.
+  const ws = c.noms.filter(n => n.winner), rest = c.noms.filter(n => !n.winner);
   // Result bars only when every result starts with a number.
   const nums = c.noms.map(n => parseFloat(String(n.result).replace(/,/g, '')));
   const bars = showRes && nums.every(v => !isNaN(v)) ? Math.max(...nums) || 1 : 0;
@@ -333,11 +338,14 @@ function stageHTML(c, showRes){
       ${bars ? `<div class="bar"><i style="--w:${v / bars}"></i></div>` : ''}</div>
       ${showRes && n.result ? `<div class="res">${esc(n.result)}</div>` : '<div></div>'}</${rt}>`;
   }).join('');
-  return `<div class="stage rv${rest.length ? '' : ' solo'}"><${tag} class="win"${linkAttrs(w)}><div class="blur"${bg(u)}></div>
+  const cards = ws.map(w => { const u = img(w), tag = w.link ? 'a' : 'div';
+    return `<${tag} class="win"${linkAttrs(w)}><div class="blur"${bg(u)}></div>
       <div class="poster"${bg(u)}>${u ? '' : esc(initials(w.name))}</div>
       <div class="body"><div class="badge metal"><svg><use href="#trophy"/></svg>Winner</div>
       <div class="name"><span class="metal">${esc(w.name)}</span></div>${w.sub ? `<div class="sub">${esc(w.sub)}</div>` : ''}
-      ${showRes && w.result ? `<div class="res">${esc(w.result)}</div>` : ''}</div></${tag}>
+      ${showRes && w.result ? `<div class="res">${esc(w.result)}</div>` : ''}</div></${tag}>`; }).join('');
+  const layout = ws.length > 1 ? ' multi' : rest.length ? '' : ' solo';
+  return `<div class="stage rv${layout}" style="--n:${ws.length}">${cards}
     ${rest.length ? `<div class="list"><h3>Nominees</h3>${rows}</div>` : ''}</div>`;
 }
 
@@ -368,10 +376,11 @@ function render(){
 
 
   // Winners at a glance, once any winner is revealed.
-  const winners = reveal ? CATS.map(c => [c, c.noms.find(n => n.winner)]).filter(([, w]) => w) : [];
+  const winners = reveal ? CATS.flatMap(c => c.noms.filter(n => n.winner).map(w => [c, w])) : [];
+  const wonCats = new Set(winners.map(([c]) => c)).size;
   $('#winners').hidden = !winners.length;
   $('#winners').innerHTML = winners.length ? `<div class="cat-kicker" style="--c:var(--gold)">${esc(S.title)}</div><h2><span class="metal">The Winners</span></h2>
-    <p class="cat-desc">${winners.length < CATS.length ? `${winners.length} of ${CATS.length} awards revealed so far. Tap a winner for the full category.` : 'Every award, at a glance. Tap a winner for the full category and results.'}</p>
+    <p class="cat-desc">${wonCats < CATS.length ? `${wonCats} of ${CATS.length} awards revealed so far. Tap a winner for the full category.` : 'Every award, at a glance. Tap a winner for the full category and results.'}</p>
     <div class="grid">${winners.map(([c, w]) => { const u = img(w); return `<a class="cap wcard" href="#${c.id}" style="--c:${c.color}"><div class="art"${bg(u)}></div>${u ? '' : `<div class="mono">${esc(initials(w.name))}</div>`}
       <div class="glare"></div><div class="kick">★ ${esc(c.name)}</div><div class="info"><div class="name">${esc(w.name)}</div>${w.sub ? `<div class="sub">${esc(w.sub)}</div>` : ''}${showRes && w.result ? `<div class="res">${esc(w.result)}</div>` : ''}</div></a>`; }).join('')}</div>` : '';
   $('#heroExplore').textContent = winners.length ? 'See the winners' : 'Explore the awards';

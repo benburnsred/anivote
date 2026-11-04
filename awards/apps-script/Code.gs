@@ -19,7 +19,6 @@
  *                separate one (votes_sheet_id setting). VotesMapping maps each field to a column header there, so an
  *                existing sheet with its own headers can be used as the datasource.
  *   VotesMapping — field | column   (timestamp, voter, code, category, nominee, value, points)
- *   Suggestions — id | Timestamp | Name | Category | Nominee | Note | Status   (public nominee suggestions)
  *   Codes      — optional voter codes: Code | Category | Used By | Used At
  *   Committee  — email | name
  *   Log        — Timestamp | Email | Action | Details
@@ -53,7 +52,6 @@ const TABS = {
   Votes: ['Timestamp', 'Voter', 'Code', 'Category', 'Nominee', 'Value', 'Points'],
   Codes: ['Code', 'Category', 'Used By', 'Used At'],
   VotesMapping: ['field', 'column'],
-  Suggestions: ['id', 'Timestamp', 'Name', 'Category', 'Nominee', 'Note', 'Status'],
   Committee: ['email', 'name'],
   Log: ['Timestamp', 'Email', 'Action', 'Details']
 };
@@ -63,7 +61,7 @@ const SITE_HEADERS = ['category', 'category_description', 'category_color', 'nom
 const VOTE_FIELDS = ['timestamp', 'voter', 'code', 'category', 'nominee', 'value', 'points'];
 const DEFAULT_SETTINGS = [['title', 'Anime X Angas Awards 2026'], ['tagline', ''], ['date', ''], ['venue', ''],
   ['stream_url', ''], ['vote_url', '../vote/'], ['vote_open', 'TRUE'], ['reveal_winners', 'FALSE'], ['show_results', 'FALSE'],
-  ['trophy_image', '../img/trophy.webp'], ['suggestions_open', 'TRUE'], ['votes_sheet_id', ''], ['votes_tab', 'Votes'], ['facebook_url', 'https://www.facebook.com/AnimexAngas'],
+  ['trophy_image', '../img/trophy.webp'], ['votes_sheet_id', ''], ['votes_tab', 'Votes'], ['facebook_url', 'https://www.facebook.com/AnimexAngas'],
   ['youtube_url', 'https://www.youtube.com/@AnimexAngas'], ['discord_url', 'https://discord.gg/AnimexAngas']];
 
 function setup() {
@@ -221,9 +219,9 @@ function doPost(e) {
   } catch (err) {
     return json({ok: false, error: 'Invalid request'});
   }
-  if (!body || (body.action !== 'vote' && body.action !== 'suggest')) return json({ok: false, error: 'Invalid request'});
+  if (!body || body.action !== 'vote') return json({ok: false, error: 'Invalid request'});
   try {
-    return json(withLock(() => body.action === 'vote' ? recordVote(body) : recordSuggestion(body)));
+    return json(withLock(() => recordVote(body)));
   } catch (err) {
     console.error(err);
     return json({ok: false, error: err.message === 'Busy — please try again' ? err.message : 'Something went wrong — please try again'});
@@ -312,19 +310,6 @@ function recordVote(b) {
   return {ok: true};
 }
 
-function recordSuggestion(b) {
-  if (settingsMap().suggestions_open !== 'TRUE') return {ok: false, error: 'Suggestions are closed'};
-  const name = String(b.name || '').replace(/\s+/g, ' ').trim().slice(0, 40);
-  const nominee = String(b.nominee || '').replace(/\s+/g, ' ').trim().slice(0, 100);
-  const note = String(b.note || '').trim().slice(0, 300);
-  const c = readTable('Categories').find(x => x.id === String(b.category || ''));
-  if (!name || !nominee || !c) return {ok: false, error: 'Please fill in your name, a category and a nominee'};
-  if (c.locked === 'TRUE') return {ok: false, error: 'Nominees for this award are final'};
-  const dup = readTable('Suggestions').some(r => r.Category === c.id && r.Nominee.toLowerCase() === nominee.toLowerCase() && r.Status !== 'rejected');
-  if (!dup) sheet('Suggestions').appendRow([newId(), new Date(), cell(name), c.id, cell(nominee), cell(note), 'pending']);
-  return {ok: true};
-}
-
 // {categoryId: {nomineeId: {points, voters, top}}} — top = first-place picks (S tier, rank 1 or a pick), for tie-breaks.
 function tally(categoryId) {
   const out = {};
@@ -379,7 +364,6 @@ function adminState() {
     nominees: readTable('Nominees'),
     results: votesInfo.error ? {} : tally(),
     votesInfo: votesInfo,
-    suggestions: readTable('Suggestions').filter(r => r.Status === 'pending'),
     log: readTable('Log').slice(-30).reverse()
   };
 }
@@ -532,36 +516,6 @@ function adminUnlockCategory(id) {
     c.locked = '';
     writeTable('Categories', TABS.Categories, rows);
     log(email, 'unlock category', c.name);
-    return adminState();
-  });
-}
-
-// action: 'approve' adds the suggestion as a nominee in categoryId (defaults to the suggested one); 'reject' dismisses it.
-function adminResolveSuggestion(id, action, categoryId) {
-  const email = requireCommittee();
-  return withLock(() => {
-    const rows = readTable('Suggestions');
-    const s = rows.find(r => r.id === id);
-    if (!s) throw new Error('Suggestion not found');
-    if (action === 'approve') {
-      const target = categoryId || s.Category;
-      const cat = readTable('Categories').find(c => c.id === target);
-      if (!cat) throw new Error('Category not found');
-      if (cat.locked === 'TRUE') throw new Error('That category is locked: unlock it to add nominees');
-      const noms = readTable('Nominees');
-      if (!noms.some(n => n.category_id === target && n.name.toLowerCase() === s.Nominee.toLowerCase())) {
-        noms.push({id: newId(), category_id: target, name: s.Nominee, subtitle: '', image: '', image_search: '', link: '', winner: ''});
-        writeTable('Nominees', TABS.Nominees, noms);
-      }
-    }
-    // Approving or rejecting one suggestion settles every pending duplicate of it.
-    rows.forEach(r => {
-      if (r.Status === 'pending' && r.Category === s.Category && r.Nominee.toLowerCase() === s.Nominee.toLowerCase()) {
-        r.Status = action === 'approve' ? 'approved' : 'rejected';
-      }
-    });
-    writeTable('Suggestions', TABS.Suggestions, rows);
-    log(email, action + ' suggestion', s.Nominee);
     return adminState();
   });
 }

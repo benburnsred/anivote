@@ -184,15 +184,13 @@ A simple admin page for the committee, served by the same Apps Script (`apps-scr
 
 After that, everything is done from the dashboard. Google's published CSV can take a few minutes to refresh after **Publish to site**.
 
-## Suggestions and locking
+## Locking
 
-- **Nominee suggestions:**
-  - While `suggestions_open` is on, the ballot shows a **Suggest a nominee** form for every category that isn't locked yet.
-  - Suggestions land in the dashboard's **Suggestions** tab. Approving one adds it as a nominee (in any unlocked category), and duplicates are merged.
-- **Lock after publish:**
-  - **Publish to site** locks every public-vote category that has nominees.
-  - While locked, nominees can't be added, edited or deleted, the type and voting method can't change, and suggestions for it close. The name, description and voting window can still be edited.
-  - **Unlock** is on the category, and every lock and unlock is in the activity log.
+**Publish to site** locks every public-vote category that has nominees, so every voter sees the same ballot:
+- While locked, nominees can't be added, edited or deleted, and the type and voting method can't change. The name, description and voting window can still be edited.
+- **Unlock** is on the category, and every lock and unlock is in the activity log.
+
+Only the committee decides categories and nominees; voters can only vote.
 
 ## Votes datasource
 

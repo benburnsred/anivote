@@ -51,7 +51,7 @@ h2{font-size:15px;margin:18px 0 10px}
 </head>
 <body>
 <header><h1>Awards Committee</h1><div class="row"><span class="me" id="me"></span><button class="primary" id="publish">Publish to site</button></div></header>
-<nav id="tabs"><button data-tab="categories" class="on">Categories</button><button data-tab="suggestions">Suggestions</button><button data-tab="results">Results</button><button data-tab="settings">Settings</button><button data-tab="activity">Activity</button></nav>
+<nav id="tabs"><button data-tab="categories" class="on">Categories</button><button data-tab="results">Results</button><button data-tab="settings">Settings</button><button data-tab="activity">Activity</button></nav>
 <main id="main"><div id="loading">Loading…</div></main>
 <div id="toast"></div>
 
@@ -144,19 +144,6 @@ function renderCategories(){
     <div id="newcat"></div>${list || '<p class="note">No categories yet. Add the first one.</p>'}`;
 }
 
-/* ===== Suggestions ===== */
-function renderSuggestions(){
-  const list = STATE.suggestions;
-  const opts = sel => STATE.categories.filter(c => c.locked !== 'TRUE').map(c => `<option value="${c.id}"${c.id === sel ? ' selected' : ''}>${esc(c.name)}</option>`).join('');
-  return `<p class="note">Nominees suggested by the public (${STATE.settings.suggestions_open === 'TRUE' ? 'suggestions are <b>open</b>' : 'suggestions are <b>closed</b>'}, change it in Settings). Approving adds the nominee to the chosen category; duplicates are merged.</p>
-    ${list.length ? `<div class="card"><div class="body" style="border:0"><table><tr><th>Nominee</th><th>Suggested for</th><th>By</th><th>Note</th><th>Add to</th><th></th></tr>
-    ${list.map(x => { const c = STATE.categories.find(k => k.id === x.Category);
-      return `<tr><td><b>${esc(x.Nominee)}</b></td><td class="meta">${esc(c ? c.name : x.Category)}</td><td class="meta">${esc(x.Name)}</td><td class="meta">${esc(x.Note)}</td>
-      <td><select class="sugcat" data-id="${x.id}">${opts(x.Category)}</select></td>
-      <td class="num"><button class="icon" data-approve="${x.id}">Approve</button> <button class="icon danger" data-reject="${x.id}">Reject</button></td></tr>`; }).join('')}</table></div></div>`
-    : '<p class="note">No pending suggestions.</p>'}`;
-}
-
 /* ===== Results ===== */
 function renderResults(){
   const cats = STATE.categories.filter(c => c.type !== 'special');
@@ -180,7 +167,6 @@ function renderResults(){
 const SETTINGS = [['title', 'Event title', 'text'], ['tagline', 'Tagline', 'text'], ['date', 'Ceremony date and time', 'datetime-local'],
   ['venue', 'Venue', 'text'], ['stream_url', 'Livestream link', 'text'], ['vote_open', 'Voting open', 'bool'],
   ['reveal_winners', 'Reveal winners on the site', 'bool'], ['show_results', 'Show points on the site', 'bool'],
-  ['suggestions_open', 'Accept nominee suggestions', 'bool'],
   ['votes_sheet_id', 'Votes spreadsheet ID (blank = this sheet)', 'text'], ['votes_tab', 'Votes tab name', 'text'],
   ['facebook_url', 'Facebook link', 'text'], ['youtube_url', 'YouTube link', 'text'], ['discord_url', 'Discord link', 'text']];
 function renderSettings(){
@@ -203,14 +189,12 @@ function renderActivity(){
 function render(){
   $('#me').textContent = STATE.email;
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === TAB));
-  $('#main').innerHTML = {categories:renderCategories, suggestions:renderSuggestions, results:renderResults, settings:renderSettings, activity:renderActivity}[TAB]();
+  $('#main').innerHTML = {categories:renderCategories, results:renderResults, settings:renderSettings, activity:renderActivity}[TAB]();
   document.querySelectorAll('.catform').forEach(f => {
     syncForm(f);
     const c = STATE.categories.find(x => x.id === f.dataset.id);
     if (c && c.locked === 'TRUE') ['type', 'method', 'max_picks'].forEach(k => f[k].disabled = true);
   });
-  const n = STATE.suggestions.length;
-  document.querySelector('[data-tab=suggestions]').textContent = n ? `Suggestions (${n})` : 'Suggestions';
 }
 
 // Show only the fields that apply to the chosen type and method.
@@ -254,8 +238,6 @@ document.addEventListener('click', e => {
   if ('cancelNom' in t.dataset){ EDIT_NOM = null; render(); return; }
   if (t.dataset.move){ e.stopPropagation(); call('adminMoveCategory', t.dataset.move, Number(t.dataset.dir)); return; }
   if (t.dataset.unlock){ if (confirm('Unlock this category? Changing nominees after people have voted can make results unfair.')) call('adminUnlockCategory', t.dataset.unlock); return; }
-  if (t.dataset.approve){ call('adminResolveSuggestion', t.dataset.approve, 'approve', document.querySelector(`.sugcat[data-id="${t.dataset.approve}"]`).value).then(s => s && toast('Added as a nominee')); return; }
-  if (t.dataset.reject){ call('adminResolveSuggestion', t.dataset.reject, 'reject', ''); return; }
   if (t.dataset.editnom){ EDIT_NOM = t.dataset.editnom; render(); return; }
   if (t.dataset.delnom){ if (confirm('Delete this nominee?')) call('adminDeleteNominee', t.dataset.delnom); return; }
   if (t.dataset.delcat){ if (confirm('Delete this category and all its nominees?')){ OPEN = null; call('adminDeleteCategory', t.dataset.delcat); } return; }

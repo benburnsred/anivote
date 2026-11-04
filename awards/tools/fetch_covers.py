@@ -1,7 +1,8 @@
 """Download cover art for awards nominees and save it in the repo.
 
 For every awards/<year>/data/nominees.csv row that has an `image_search` title but no `image`, look the
-title up on AniList (then Jikan / MyAnimeList), download the poster to awards/img/covers/, and fill in
+title up on AniList (then Jikan / MyAnimeList). `image_search` can list alternative titles separated by
+" | ", tried in order until one has real cover art. The script then downloads the poster download the poster to awards/img/covers/, and fill in
 `image` with its path. Pages then load covers from the site itself instead of calling those APIs from
 every visitor's browser. Rows that already have an `image` are never touched, so this is safe to rerun.
 
@@ -43,7 +44,8 @@ def anilist(title):
     q = 'query($s:String){Media(search:$s,type:ANIME,format_not_in:[SPECIAL,OVA,TV_SHORT,MUSIC]){coverImage{extraLarge large}}}'
     j = get_json('https://graphql.anilist.co', {'query': q, 'variables': {'s': title}}) or {}
     c = ((j.get('data') or {}).get('Media') or {}).get('coverImage') or {}
-    return c.get('extraLarge') or c.get('large')
+    url = c.get('extraLarge') or c.get('large')
+    return None if url and '/default' in url else url  # entries without art get AniList's "NO IMAGE" placeholder
 
 
 def jikan(title):
@@ -83,18 +85,23 @@ def main():
             if not title or r[ii].strip():
                 continue
             if title not in found:
-                existing = glob.glob(os.path.join(COVERS, slug(title) + '.*'))
+                name = slug(title.split('|')[0])
+                existing = glob.glob(os.path.join(COVERS, name + '.*'))
                 if existing:
                     found[title] = os.path.basename(existing[0])
                 else:
-                    url = anilist(title)
-                    time.sleep(2.1)  # AniList allows ~30 requests a minute
+                    url = None
+                    for alt in [t.strip() for t in title.split('|') if t.strip()]:
+                        url = anilist(alt)
+                        time.sleep(2.1)  # AniList allows ~30 requests a minute
+                        if url:
+                            break
+                        print(f'  AniList has no cover for {alt!r}')
                     if not url:
-                        print(f'  AniList has no match for {title!r}, trying Jikan')
-                        url = jikan(title)
+                        url = jikan(title.split('|')[0].strip())
                         time.sleep(1)
                     try:
-                        found[title] = download(url, slug(title)) if url else None
+                        found[title] = download(url, name) if url else None
                     except Exception as e:  # keep going; the page falls back to a live lookup
                         print(f'  download failed for {title!r}: {e}')
                         found[title] = None

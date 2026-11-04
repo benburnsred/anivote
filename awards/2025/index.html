@@ -516,14 +516,14 @@ async function load(){
 async function findCovers(titles){
   const out = {};
   try {
-    const query = '{' + titles.map((t, i) => `a${i}:Media(search:${JSON.stringify(t)},type:ANIME,format_not_in:[SPECIAL,OVA,TV_SHORT,MUSIC]){coverImage{extraLarge large}}`).join(' ') + '}';
+    const query = '{' + titles.map((t, i) => `a${i}:Media(search:${JSON.stringify(t.split('|')[0].trim())},type:ANIME,format_not_in:[SPECIAL,OVA,TV_SHORT,MUSIC]){coverImage{extraLarge large}}`).join(' ') + '}';
     const res = await fetch('https://graphql.anilist.co', {method:'POST', headers:{'Content-Type':'application/json', Accept:'application/json'}, body:JSON.stringify({query})});
     const j = await res.json(); // AniList still returns the found titles when some are missing
     titles.forEach((t, i) => { const c = j.data?.['a' + i]?.coverImage; if (c?.extraLarge || c?.large) out[t] = c.extraLarge || c.large; });
   } catch (e){}
   for (const t of titles.filter(t => !out[t])){
     try {
-      const j = await (await fetch('https://api.jikan.moe/v4/anime?limit=1&q=' + encodeURIComponent(t))).json();
+      const j = await (await fetch('https://api.jikan.moe/v4/anime?limit=1&q=' + encodeURIComponent(t.split('|')[0].trim()))).json();
       const u = j.data?.[0]?.images?.webp?.large_image_url || j.data?.[0]?.images?.jpg?.large_image_url;
       if (u) out[t] = u;
     } catch (e){}

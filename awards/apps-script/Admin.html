@@ -50,8 +50,8 @@ h2{font-size:15px;margin:18px 0 10px}
 </style>
 </head>
 <body>
-<header><h1>Awards Committee</h1><div class="row"><span class="me" id="me"></span><button class="primary" id="publish">Publish to site</button></div></header>
-<nav id="tabs"><button data-tab="categories" class="on">Categories</button><button data-tab="results">Results</button><button data-tab="settings">Settings</button><button data-tab="activity">Activity</button></nav>
+<header><h1>Awards Admin</h1><div class="row"><span class="me" id="me"></span><a href="?page=committee" style="color:#e9c46a;font-size:12px">Committee page</a><button class="primary" id="publish">Publish to site</button></div></header>
+<nav id="tabs"><button data-tab="proposals">Proposals</button><button data-tab="categories" class="on">Categories</button><button data-tab="results">Results</button><button data-tab="settings">Settings</button><button data-tab="activity">Activity</button></nav>
 <main id="main"><div id="loading">Loading…</div></main>
 <div id="toast"></div>
 
@@ -144,6 +144,24 @@ function renderCategories(){
     <div id="newcat"></div>${list || '<p class="note">No categories yet. Add the first one.</p>'}`;
 }
 
+/* ===== Proposals ===== */
+function catLabel(ref){
+  const c = STATE.categories.find(x => x.id === ref); if (c) return c.name;
+  const p = STATE.proposals.find(x => x.id === ref); return p ? p.title + ' (proposed, accept it first)' : 'Unknown category';
+}
+function renderProposals(){
+  const list = STATE.proposals;
+  return `<p class="note">What the committee proposed on the committee page, most supported first (${STATE.members} members). Accepting adds it to the official ballot under Categories; nothing goes public until you publish.</p>`
+    + (list.length ? `<div class="card"><div class="body" style="border:0"><table><tr><th>Support</th><th>Proposal</th><th>Details</th><th></th></tr>${list.map(p => {
+      const d = p.details;
+      const info = p.kind === 'category' ? (d.type === 'special' ? 'Special award' : (STATE.methods[d.method] || '').replace('N', d.max_picks || 3)) + (d.description ? ' · ' + d.description : '')
+        : p.kind === 'method' ? 'For ' + catLabel(p.category_ref) : 'In ' + catLabel(p.category_ref) + (d.subtitle ? ' · ' + d.subtitle : '');
+      return `<tr><td><b>👍 ${p.up} · 👎 ${p.down}</b><div class="meta">${esc(p.comments.length)} comments</div></td>
+        <td><span class="tag">${p.kind}</span> <b>${esc(p.title)}</b><div class="meta">by ${esc(p.authorName)}</div></td><td class="meta">${esc(info)}</td>
+        <td class="num"><button class="icon" data-accept="${p.id}">Accept</button> <button class="icon danger" data-rejectp="${p.id}">Reject</button></td></tr>`;
+    }).join('')}</table></div></div>` : '<p class="note">No open proposals.</p>');
+}
+
 /* ===== Results ===== */
 function renderResults(){
   const cats = STATE.categories.filter(c => c.type !== 'special');
@@ -189,7 +207,8 @@ function renderActivity(){
 function render(){
   $('#me').textContent = STATE.email;
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === TAB));
-  $('#main').innerHTML = {categories:renderCategories, results:renderResults, settings:renderSettings, activity:renderActivity}[TAB]();
+  $('[data-tab=proposals]').textContent = STATE.proposals.length ? `Proposals (${STATE.proposals.length})` : 'Proposals';
+  $('#main').innerHTML = {proposals:renderProposals, categories:renderCategories, results:renderResults, settings:renderSettings, activity:renderActivity}[TAB]();
   document.querySelectorAll('.catform').forEach(f => {
     syncForm(f);
     const c = STATE.categories.find(x => x.id === f.dataset.id);
@@ -238,6 +257,8 @@ document.addEventListener('click', e => {
   if ('cancelNom' in t.dataset){ EDIT_NOM = null; render(); return; }
   if (t.dataset.move){ e.stopPropagation(); call('adminMoveCategory', t.dataset.move, Number(t.dataset.dir)); return; }
   if (t.dataset.unlock){ if (confirm('Unlock this category? Changing nominees after people have voted can make results unfair.')) call('adminUnlockCategory', t.dataset.unlock); return; }
+  if (t.dataset.accept){ call('adminDecideProposal', t.dataset.accept, 'accept').then(s => s && toast('Accepted: added to the official ballot')); return; }
+  if (t.dataset.rejectp){ if (confirm('Reject this proposal?')) call('adminDecideProposal', t.dataset.rejectp, 'reject'); return; }
   if (t.dataset.editnom){ EDIT_NOM = t.dataset.editnom; render(); return; }
   if (t.dataset.delnom){ if (confirm('Delete this nominee?')) call('adminDeleteNominee', t.dataset.delnom); return; }
   if (t.dataset.delcat){ if (confirm('Delete this category and all its nominees?')){ OPEN = null; call('adminDeleteCategory', t.dataset.delcat); } return; }

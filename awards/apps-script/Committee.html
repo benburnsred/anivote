@@ -1,0 +1,162 @@
+<!doctype html>
+<html>
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<style>
+:root{--bg:#f6f6f8;--card:#fff;--ink:#1d1b22;--muted:#6b6878;--line:#e3e1e8;--accent:#a8761f;--bad:#b3261e;--good:#1e7b3a}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:var(--bg)}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 18px;background:#16141c;color:#fff}
+header h1{margin:0;font-size:17px}
+header .me{color:#b9b5c6;font-size:12px}
+header a{color:#e9c46a;font-size:12px;margin-left:10px}
+nav{display:flex;gap:2px;padding:0 18px;background:#fff;border-bottom:1px solid var(--line);overflow-x:auto}
+nav button{border:0;background:none;padding:12px 14px;cursor:pointer;color:var(--muted);font:inherit;font-weight:600;border-bottom:2px solid transparent;white-space:nowrap}
+nav button.on{color:var(--ink);border-color:var(--accent)}
+main{max-width:900px;margin:0 auto;padding:18px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;margin-bottom:10px;padding:12px 14px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.spacer{flex:1}
+.title{font-weight:700}
+.meta{color:var(--muted);font-size:12px}
+.tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;background:#eee;color:#444}
+.tag.category{background:#e4ecfd;color:#2a4a9a}.tag.nominee{background:#e3f4e8;color:#1e6b36}.tag.method{background:#fbefd5;color:#8a5a00}
+.tag.accepted{background:var(--good);color:#fff}.tag.rejected,.tag.withdrawn{background:#999;color:#fff}
+button{font:inherit;border:1px solid var(--line);background:#fff;border-radius:6px;padding:6px 12px;cursor:pointer}
+button:hover{border-color:#bbb}
+button.primary{background:var(--ink);color:#fff;border-color:var(--ink)}
+button.vote.on.up{background:#e3f4e8;border-color:var(--good);color:var(--good)}
+button.vote.on.down{background:#fde4e1;border-color:var(--bad);color:var(--bad)}
+button.link{border:0;background:none;padding:0;color:var(--muted);text-decoration:underline}
+label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:10px}
+input,select,textarea{display:block;width:100%;margin-top:4px;font:inherit;padding:7px 9px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink)}
+textarea{min-height:50px;resize:vertical}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0 14px}
+.score{min-width:44px;text-align:center;font-weight:800;font-size:16px}
+.comments{margin-top:10px;border-top:1px solid var(--line);padding-top:8px}
+.comment{margin:6px 0}.comment b{font-size:13px}
+.note{color:var(--muted);font-size:13px;margin:4px 0 14px}
+h2{font-size:15px;margin:20px 0 10px}
+ul{margin:6px 0 0;padding-left:18px}
+#toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#16141c;color:#fff;padding:9px 14px;border-radius:6px;display:none;max-width:90%}
+#toast.err{background:var(--bad)}
+</style>
+</head>
+<body>
+<header><h1>Awards Committee</h1><div><span class="me" id="me"></span><a id="adminLink" href="?page=admin" hidden>Admin dashboard →</a></div></header>
+<nav id="tabs"><button data-tab="open" class="on">Open proposals</button><button data-tab="new">Propose</button><button data-tab="ballot">Official ballot</button><button data-tab="closed">Decided</button></nav>
+<main id="main"><p class="note">Loading…</p></main>
+<div id="toast"></div>
+
+<script>
+let STATE = null, TAB = 'open', FILTER = '', OPENC = {};
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function toast(msg, err){ const t = $('#toast'); t.textContent = msg; t.className = err ? 'err' : ''; t.style.display = 'block'; clearTimeout(t._h); t._h = setTimeout(() => t.style.display = 'none', err ? 6000 : 2500); }
+function call(fn, ...args){
+  return new Promise(resolve => google.script.run
+    .withSuccessHandler(s => { STATE = s; render(); resolve(s); })
+    .withFailureHandler(e => { toast(e.message || String(e), true); resolve(null); })[fn](...args));
+}
+const methodText = (m, n) => (STATE.methods[m] || STATE.methods.tier).replace('N', n || 3);
+// Name of the category a proposal belongs to: an official one, or another (proposed) category.
+function catName(ref){
+  const c = STATE.categories.find(x => x.id === ref); if (c) return c.name;
+  const p = STATE.proposals.find(x => x.id === ref); return p ? p.title + ' (proposed)' : 'Unknown category';
+}
+
+function proposalHTML(p){
+  const d = p.details, open = p.status === 'open';
+  const what = p.kind === 'category' ? `${d.type === 'special' ? 'Special award (committee picks the winner)' : 'Public vote · ' + esc(methodText(d.method, d.max_picks))}${d.description ? ' · ' + esc(d.description) : ''}`
+    : p.kind === 'method' ? `Voting method for <b>${esc(catName(p.category_ref))}</b>`
+    : `Nominee for <b>${esc(catName(p.category_ref))}</b>${d.subtitle ? ' · ' + esc(d.subtitle) : ''}${d.link ? ` · <a href="${esc(d.link)}" target="_blank">link</a>` : ''}`;
+  const who = list => list.length ? esc(list.join(', ')) : 'nobody yet';
+  return `<div class="card"><div class="row">
+      ${open ? `<button class="vote up${p.mine === 'up' ? ' on' : ''}" data-vote="up" data-id="${p.id}" title="Support: ${who(p.upBy)}">👍 ${p.up}</button>
+      <button class="vote down${p.mine === 'down' ? ' on' : ''}" data-vote="down" data-id="${p.id}" title="Against: ${who(p.downBy)}">👎 ${p.down}</button>` : `<span class="score">${p.up - p.down >= 0 ? '+' : ''}${p.up - p.down}</span>`}
+      <div style="flex:1;min-width:200px"><span class="tag ${p.kind}">${p.kind}</span> ${open ? '' : `<span class="tag ${p.status}">${p.status}</span>`}
+        <span class="title">${esc(p.title)}</span><div class="meta">${what}</div>
+        <div class="meta">Proposed by ${esc(p.authorName)} · for: ${who(p.upBy)} · against: ${who(p.downBy)}</div></div>
+    </div>
+    <div class="row" style="margin-top:6px"><button class="link" data-toggle="${p.id}">${p.comments.length} comment${p.comments.length === 1 ? '' : 's'}</button>
+      ${open && p.author === STATE.me.email ? '<span class="spacer"></span><button class="link" data-withdraw="' + p.id + '">Withdraw</button>' : ''}</div>
+    ${OPENC[p.id] ? `<div class="comments">${p.comments.map(c => `<div class="comment"><b>${esc(c.by)}</b> <span class="meta">${esc(new Date(c.at).toLocaleString())}</span><div>${esc(c.text)}</div></div>`).join('') || '<p class="meta">No comments yet.</p>'}
+      ${open ? `<form class="commentform row" data-id="${p.id}"><input name="text" placeholder="Make your case…" style="flex:1;margin:0"><button class="primary">Post</button></form>` : ''}</div>` : ''}
+  </div>`;
+}
+
+function renderOpen(){
+  const list = STATE.proposals.filter(p => p.status === 'open' && (!FILTER || p.kind === FILTER));
+  const f = (k, label) => `<button data-filter="${k}" class="${FILTER === k ? 'primary' : ''}">${label}</button>`;
+  return `<p class="note">Vote 👍 or 👎 on each proposal and argue it out in the comments. Proposals are sorted by support. An admin makes the final call: accepted ones go onto the official ballot. ${STATE.members} committee members.</p>
+    <div class="row" style="margin-bottom:12px">${f('', 'All')}${f('category', 'Categories')}${f('nominee', 'Nominees')}${f('method', 'Voting methods')}<span class="spacer"></span><button class="primary" data-tab="new">+ Propose</button></div>
+    ${list.map(proposalHTML).join('') || '<p class="note">No open proposals. Start one!</p>'}`;
+}
+
+function renderNew(){
+  const methods = Object.entries(STATE.methods).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join('');
+  const catOpts = (withProposed, unlockedOnly) => STATE.categories.filter(c => !unlockedOnly || c.locked !== 'TRUE').map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join('')
+    + (withProposed ? STATE.proposals.filter(p => p.kind === 'category' && p.status === 'open').map(p => `<option value="${p.id}">${esc(p.title)} (proposed)</option>`).join('') : '');
+  return `<div class="card"><h2 style="margin-top:0">Propose a category</h2><form class="propose" data-kind="category"><div class="grid">
+      <label>Name<input name="title" required placeholder="e.g. Best Fight Scene 2026"></label>
+      <label>Type<select name="type"><option value="vote">Public vote</option><option value="special">Special award / mention (committee picks)</option></select></label>
+      <label>Voting method<select name="method">${methods}</select></label>
+      <label>N (picks / ranks, for pick N or rank N)<input name="max_picks" type="number" min="1" max="20" placeholder="3"></label></div>
+      <label>Description (optional)<textarea name="description"></textarea></label><button class="primary">Propose category</button></form></div>
+    <div class="card"><h2 style="margin-top:0">Propose a nominee</h2><form class="propose" data-kind="nominee"><div class="grid">
+      <label>Category<select name="category_ref" required>${catOpts(true, true)}</select></label>
+      <label>Nominee<input name="title" required></label>
+      <label>Subtitle (artist, studio…)<input name="subtitle"></label>
+      <label>Link (trailer, MV…)<input name="link" placeholder="https://"></label></div><button class="primary">Propose nominee</button></form></div>
+    <div class="card"><h2 style="margin-top:0">Propose a voting method</h2><p class="note">For an official category. For a proposed category, say it in its comments.</p><form class="propose" data-kind="method"><div class="grid">
+      <label>Category<select name="category_ref" required>${catOpts(false, true)}</select></label>
+      <label>Voting method<select name="method">${methods}</select></label>
+      <label>N (for pick N or rank N)<input name="max_picks" type="number" min="1" max="20" placeholder="3"></label></div><button class="primary">Propose method</button></form></div>`;
+}
+
+function renderBallot(){
+  return `<p class="note">What's official so far (decided by an admin). Locked categories are published and open for voting.</p>` + (STATE.categories.map(c => `<div class="card">
+    <span class="title">${esc(c.name)}</span> ${c.type === 'special' ? '<span class="tag method">special</span>' : ''} ${c.locked === 'TRUE' ? '<span class="tag">locked</span>' : ''}
+    <div class="meta">${c.type === 'special' ? 'Committee picks the winner' : esc(methodText(c.method, c.max_picks))}${c.description ? ' · ' + esc(c.description) : ''}</div>
+    ${c.nominees.length ? `<ul>${c.nominees.map(n => `<li>${esc(n)}</li>`).join('')}</ul>` : '<div class="meta">No nominees yet.</div>'}</div>`).join('') || '<p class="note">Nothing official yet.</p>');
+}
+
+function renderClosed(){
+  const list = STATE.proposals.filter(p => p.status !== 'open').sort((a, b) => String(b.created).localeCompare(String(a.created)));
+  return list.map(proposalHTML).join('') || '<p class="note">Nothing decided yet.</p>';
+}
+
+function render(){
+  $('#me').textContent = `${STATE.me.name} (${STATE.me.email})`;
+  $('#adminLink').hidden = !STATE.me.admin;
+  const n = STATE.proposals.filter(p => p.status === 'open').length;
+  $('[data-tab=open]').textContent = `Open proposals (${n})`;
+  document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === TAB));
+  $('#main').innerHTML = {open:renderOpen, new:renderNew, ballot:renderBallot, closed:renderClosed}[TAB]();
+}
+
+document.addEventListener('click', e => {
+  const t = e.target.closest('button'); if (!t) return;
+  if (t.dataset.tab){ TAB = t.dataset.tab; render(); return; }
+  if ('filter' in t.dataset){ FILTER = t.dataset.filter; render(); return; }
+  if (t.dataset.vote){ const p = STATE.proposals.find(x => x.id === t.dataset.id); call('committeeVote', p.id, p.mine === t.dataset.vote ? '' : t.dataset.vote); return; }
+  if (t.dataset.toggle){ OPENC[t.dataset.toggle] = !OPENC[t.dataset.toggle]; render(); return; }
+  if (t.dataset.withdraw){ if (confirm('Withdraw your proposal?')) call('committeeWithdraw', t.dataset.withdraw); }
+});
+document.addEventListener('submit', e => {
+  e.preventDefault();
+  const f = e.target, d = Object.fromEntries(new FormData(f).entries());
+  if (f.classList.contains('propose')){
+    d.kind = f.dataset.kind;
+    call('committeePropose', d).then(s => { if (s){ toast('Proposed. Now rally support!'); TAB = 'open'; FILTER = ''; render(); } });
+  } else if (f.classList.contains('commentform')){
+    call('committeeComment', f.dataset.id, d.text).then(s => s && (OPENC[f.dataset.id] = true, render()));
+  }
+});
+
+google.script.run.withSuccessHandler(s => { STATE = s; render(); })
+  .withFailureHandler(e => { $('#main').innerHTML = `<p class="note" style="color:var(--bad)">${esc(e.message || e)}</p>`; }).committeeState();
+</script>
+</body>
+</html>

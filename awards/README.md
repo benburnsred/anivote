@@ -153,7 +153,18 @@ The Results tab is hidden (`SHOW_RESULTS_TAB = false`) until it's decided how re
 
 These are popular 2026 anime songs from the Billboard JAPAN Hot Animation mid-year chart and the Anime Corner and Anime!Anime! seasonal fan polls. Treat them as placeholder data. "IRIS OUT" is a movie theme rather than a TV opening.
 
-# Committee dashboard (2026 onwards)
+# Committee page (2026 onwards)
+
+Where the committee argues out what goes on the ballot: `…/exec?page=committee` (same deployment as the admin dashboard).
+
+- **Propose** a category (name, type, voting method), a nominee (for an official or a proposed category), or a different voting method for an official category. Duplicates are refused.
+- **Vote** 👍 / 👎 on any open proposal: one vote per member, changeable, and the proposer's 👍 is added automatically. Everyone can see who voted which way.
+- **Comment** on proposals to make the case.
+- See the **Official ballot** so far, and every **Decided** proposal.
+
+Admins see the proposals ranked by support in the dashboard's **Proposals** tab and **Accept** (added to the official ballot) or **Reject** them. Accepting a proposed category carries its nominee proposals over to it. Who's an admin is set by the `role` column of the `Committee` tab (`admin` or `member`), so the dashboard can be handed to committee chairs by making them admins.
+
+# Admin dashboard (2026 onwards)
 
 A simple admin page for the committee, served by the same Apps Script (`apps-script/Code.gs` + `apps-script/Admin.html`). The committee can:
 
@@ -172,12 +183,12 @@ A simple admin page for the committee, served by the same Apps Script (`apps-scr
 
 1. Create a new Google Sheet for the edition. Open **Extensions → Apps Script**, then:
    - paste `Code.gs`
-   - add an HTML file named `Admin` with the contents of `Admin.html`
+   - add two HTML files, named `Admin` and `Committee`, with the contents of `Admin.html` and `Committee.html`
    - run `setup`
-2. In the `Committee` tab, list each member's Google email. Share the Sheet with them as **Editor**.
+2. In the `Committee` tab, list each member's Google email, name and role (`admin` or `member`). Share the Sheet with them as **Editor**.
 3. Make two deployments: **Deploy → New deployment → Web app**, once with each of these settings:
    - **Public:** Execute as *Me*, access *Anyone*. Paste this URL into `APPS_SCRIPT_URL` in `vote/index.html`.
-   - **Committee:** Execute as *User accessing the web app*, access *Anyone with Google account*. The dashboard is this URL + `?page=admin`. Bookmark it for the committee.
+   - **Committee:** Execute as *User accessing the web app*, access *Anyone with Google account*. Committee page: this URL + `?page=committee`; admin dashboard: this URL + `?page=admin`.
 4. Publish the data to the site: **File → Share → Publish to web**, once for the `Site` tab and once for the `Settings` tab, choosing CSV each time. Put the two links in:
    - `NOMINEES_CSV` / `SETTINGS_CSV` at the top of `2026/index.html`
    - the same two variables in `vote/index.html`

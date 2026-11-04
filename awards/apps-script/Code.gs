@@ -387,8 +387,17 @@ function adminState() {
     proposals: proposalList(currentMember().email).filter(x => x.status === 'open'),
     members: readTable('Committee').filter(r => r.email.trim()).length,
     votesInfo: votesInfo,
-    log: readTable('Log').slice(-30).reverse()
+    log: readTable('Log').slice(-30).reverse(),
+    unpublished: hasUnpublishedChanges()
   };
+}
+
+// True when categories, nominees or winners changed since the last Publish (settings go live without publishing).
+function hasUnpublishedChanges() {
+  const log = readTable('Log');
+  let last = -1;
+  log.forEach((l, i) => { if (l.Action === 'publish') last = i; });
+  return log.slice(last + 1).some(l => !/^(publish|edit settings|propose|withdraw proposal|reject proposal)/.test(l.Action));
 }
 
 function adminSaveCategory(c) {

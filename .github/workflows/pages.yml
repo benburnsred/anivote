@@ -4,6 +4,11 @@ on:
   push:
     branches: ["main"]
   workflow_dispatch:
+    inputs:
+      archive_year:
+        description: "Archive an awards edition (e.g. 2026): save its Google Sheet data into the site permanently. Leave blank to just deploy."
+        required: false
+        default: ""
 
 permissions:
   contents: write  # lets the cover-art step commit downloaded images back to main
@@ -23,6 +28,20 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      # Freeze an awards edition that reads a Google Sheet into files in the repo (runs only when a year is given).
+      - name: Archive awards edition
+        if: ${{ github.event.inputs.archive_year != '' }}
+        env:
+          YEAR: ${{ github.event.inputs.archive_year }}
+        run: |
+          python3 awards/tools/archive_edition.py "$YEAR"
+          if [ -n "$(git status --porcelain awards)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+            git add awards
+            git commit -m "Archive awards $YEAR"
+            git push
+          fi
       # Download cover art for awards nominees into the repo, so pages don't depend on anime APIs at runtime.
       # A failure here never blocks the deploy; pages fall back to looking covers up in the browser.
       - name: Fetch awards cover art

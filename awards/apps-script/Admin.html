@@ -4,7 +4,7 @@
 <base target="_top">
 <meta charset="utf-8">
 <style>
-:root{--bg:#f6f6f8;--card:#fff;--ink:#1d1b22;--muted:#6b6878;--line:#e3e1e8;--accent:#a8761f;--bad:#b3261e;--good:#1e7b3a}
+:root{--bg:#f6f6f8;--card:#fff;--ink:#1d1b22;--muted:#6b6878;--line:#e3e1e8;--accent:#a8761f;--bad:#b3261e;--good:#1e7b3a;--vote:#3b6fd8;--special:#c98a12;--lock:#8a8798;--warn:#b86e00}
 *{box-sizing:border-box}
 body{margin:0;font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:var(--bg)}
 header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 18px;background:#16141c;color:#fff}
@@ -47,11 +47,37 @@ tr.tie td{background:#fff8e6}
 #toast.err{background:var(--bad)}
 #loading{padding:40px;text-align:center;color:var(--muted)}
 h2{font-size:15px;margin:18px 0 10px}
+/* Status strip */
+.status{display:flex;gap:8px;flex-wrap:wrap;align-items:center;max-width:1000px;margin:14px auto 0;padding:0 18px}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;padding:5px 10px;border-radius:99px;background:#fff;border:1px solid var(--line);color:var(--muted)}
+.pill i{width:8px;height:8px;border-radius:50%;background:var(--lock);display:inline-block}
+.pill.on{color:var(--good);border-color:#bfe3cb;background:#effaf2}.pill.on i{background:var(--good)}
+.pill.off{color:var(--bad);border-color:#f3c9c4;background:#fdf1ef}.pill.off i{background:var(--bad)}
+.pill.warn{color:var(--warn);border-color:#f1d6a6;background:#fff6e6}.pill.warn i{background:var(--warn)}
+#publish.dirty{background:var(--warn);border-color:var(--warn)}
+#publish.dirty::before{content:"● ";}
+/* Category cards: colour by kind and state */
+.card.cat{border-left:4px solid var(--vote)}
+.card.cat.special{border-left-color:var(--special)}
+.card.cat.locked{border-left-color:var(--lock);background:#fbfbfc}
+.card.cat .done{color:var(--good);font-weight:700}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin:-4px 0 12px}
+.legend span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px;background:var(--c)}
+/* Grouped fields */
+fieldset{border:1px solid var(--line);border-radius:8px;padding:10px 12px 2px;margin:0 0 12px;background:#fcfcfd}
+legend{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:0 6px}
+fieldset.voting{border-color:#cfdcf7;background:#f6f9ff}fieldset.voting legend{color:var(--vote)}
+fieldset.reveal{border-color:#f1dcae;background:#fffaf0}fieldset.reveal legend{color:var(--special)}
+.nominees{border:1px solid var(--line);border-radius:8px;padding:4px 12px 12px;background:#fcfcfd;margin-top:6px}
+.danger-zone{border-top:1px dashed #f3c9c4;margin-top:16px;padding-top:12px}
+select.yes{border-color:#bfe3cb;background:#effaf2;color:var(--good);font-weight:700}
+select.no{border-color:#e3e1e8;color:var(--muted)}
 </style>
 </head>
 <body>
 <header><h1>Awards Admin</h1><div class="row"><span class="me" id="me"></span><a href="?page=committee" style="color:#e9c46a;font-size:12px">Committee page</a><button class="primary" id="publish">Publish to site</button></div></header>
 <nav id="tabs"><button data-tab="proposals">Proposals</button><button data-tab="categories" class="on">Categories</button><button data-tab="results">Results</button><button data-tab="settings">Settings</button><button data-tab="activity">Activity</button></nav>
+<div class="status" id="status"></div>
 <main id="main"><div id="loading">Loading…</div></main>
 <div id="toast"></div>
 
@@ -86,15 +112,18 @@ function categoryForm(c){
   c = c || {type:'vote', method:'tier'};
   const methods = Object.entries(STATE.methods).map(([k, v]) => `<option value="${k}"${c.method === k ? ' selected' : ''}>${esc(v)}</option>`).join('');
   return `<form class="catform" data-id="${esc(c.id || '')}">
-    <div class="grid">
+    <fieldset><legend>Basics</legend><div class="grid">
       <label>Name<input name="name" value="${esc(c.name)}" required placeholder="e.g. Anime of the Year 2026"></label>
       <label>Type<select name="type"><option value="vote"${c.type !== 'special' ? ' selected' : ''}>Public vote</option><option value="special"${c.type === 'special' ? ' selected' : ''}>Special award / mention (no voting)</option></select></label>
-      <label class="vote-only">Voting method<select name="method">${methods}</select></label>
-      <label class="vote-only picks">How many picks / ranks (N)<input name="max_picks" type="number" min="1" max="20" value="${esc(c.max_picks || '')}" placeholder="3"></label>
-      <label class="vote-only">Voting opens (optional)<input name="opens" type="datetime-local" value="${esc(local(c.opens))}"></label>
-      <label class="vote-only">Voting closes (optional)<input name="closes" type="datetime-local" value="${esc(local(c.closes))}"></label>
-    </div>
-    <label>Description (optional)<textarea name="description">${esc(c.description)}</textarea></label>
+    </div><label>Description (optional)<textarea name="description">${esc(c.description)}</textarea></label></fieldset>
+    <fieldset class="voting vote-only"><legend>Voting</legend><div class="grid">
+      <label>Voting method<select name="method">${methods}</select></label>
+      <label class="picks">How many picks / ranks (N)<input name="max_picks" type="number" min="1" max="20" value="${esc(c.max_picks || '')}" placeholder="3"></label>
+    </div></fieldset>
+    <fieldset class="vote-only"><legend>Schedule (optional)</legend><div class="grid">
+      <label>Voting opens<input name="opens" type="datetime-local" value="${esc(local(c.opens))}"></label>
+      <label>Voting closes<input name="closes" type="datetime-local" value="${esc(local(c.closes))}"></label>
+    </div></fieldset>
     <div class="row"><button class="primary">${c.id ? 'Save category' : 'Add category'}</button>${c.id ? '' : '<button type="button" data-cancel>Cancel</button>'}</div>
   </form>`;
 }
@@ -124,7 +153,7 @@ function renderCategories(){
       ${locked ? `<div class="hint">Locked since it was published for voting: nominees and voting method can't change, so every voter sees the same ballot.
         <button data-unlock="${c.id}" style="margin-left:8px">Unlock</button></div>` : ''}
       ${categoryForm(c)}
-      <h2>Nominees (${noms.length})</h2>
+      <div class="nominees"><h2>Nominees (${noms.length})</h2>
       ${c.type === 'special' ? '<p class="note">Tick the winner(s). Special awards don\'t appear on the ballot.</p>' : ''}
       ${noms.length ? `<table><tr><th></th><th>Nominee</th><th>Subtitle</th>${c.type === 'special' ? '<th>Winner</th>' : ''}<th></th></tr>
         ${noms.map(n => EDIT_NOM === n.id ? `<tr><td colspan="5">${nomineeForm(c.id, n)}</td></tr>` : `<tr>
@@ -132,15 +161,16 @@ function renderCategories(){
           <td>${esc(n.name)}</td><td class="meta">${esc(n.subtitle)}</td>
           ${c.type === 'special' ? `<td><input type="checkbox" class="win" data-cat="${c.id}" data-id="${n.id}"${n.winner === 'TRUE' ? ' checked' : ''} style="width:auto"></td>` : ''}
           <td class="num">${locked ? '' : `<button class="icon" data-editnom="${n.id}">Edit</button> <button class="icon danger" data-delnom="${n.id}">Delete</button>`}</td></tr>`).join('')}</table>` : '<p class="note">No nominees yet.</p>'}
-      ${locked ? '' : `<h2>Add a nominee</h2>${nomineeForm(c.id)}`}
-      <div class="row" style="margin-top:14px"><span class="spacer"></span><button class="danger" data-delcat="${c.id}">Delete category</button></div>
+      ${locked ? '' : `<h2>Add a nominee</h2>${nomineeForm(c.id)}`}</div>
+      <div class="row danger-zone"><span class="meta">Deleting removes the category and its nominees.</span><span class="spacer"></span><button class="danger" data-delcat="${c.id}">Delete category</button></div>
     </div>`;
-    return `<div class="card"><div class="head" data-open="${c.id}">
+    return `<div class="card cat${c.type === 'special' ? ' special' : ''}${locked ? ' locked' : ''}"><div class="head" data-open="${c.id}">
       <div class="row"><button class="icon" data-move="${c.id}" data-dir="-1"${i ? '' : ' disabled'} title="Move up">↑</button><button class="icon" data-move="${c.id}" data-dir="1"${i < cats.length - 1 ? '' : ' disabled'} title="Move down">↓</button></div>
-      <div class="title">${esc(c.name)}${status}<div class="meta">${esc(methodLabel(c))} · ${noms.length} nominees${c.type === 'special' ? '' : ` · ${c.ballots} ballots`}${winners.length ? ` · Winner: ${esc(winners.map(w => w.name).join(', '))}` : ''}</div></div>
+      <div class="title">${esc(c.name)}${status}<div class="meta">${esc(methodLabel(c))} · ${noms.length} nominees${c.type === 'special' ? '' : ` · ${c.ballots} ballots`}${winners.length ? ` · <span class="done">✓ Winner: ${esc(winners.map(w => w.name).join(', '))}</span>` : ''}</div></div>
       <span class="meta">${OPEN === c.id ? '▲' : '▼'}</span></div>${body}</div>`;
   }).join('');
   return `<div class="row" style="margin-bottom:12px"><span class="note" style="margin:0">Changes are saved right away but only appear on the public site after <b>Publish to site</b>.</span><span class="spacer"></span><button class="primary" id="addcat">Add category</button></div>
+    <div class="legend"><span style="--c:var(--vote)">Public vote</span><span style="--c:var(--special)">Special award</span><span style="--c:var(--lock)">Locked (published)</span></div>
     <div id="newcat"></div>${list || '<p class="note">No categories yet. Add the first one.</p>'}`;
 }
 
@@ -182,21 +212,29 @@ function renderResults(){
 }
 
 /* ===== Settings ===== */
-const SETTINGS = [['title', 'Event title', 'text'], ['tagline', 'Tagline', 'text'], ['date', 'Ceremony date and time', 'datetime-local'],
-  ['venue', 'Venue', 'text'], ['stream_url', 'Livestream link', 'text'], ['vote_open', 'Voting open', 'bool'],
-  ['reveal_winners', 'Reveal winners on the site', 'bool'], ['show_results', 'Show points on the site', 'bool'],
-  ['votes_sheet_id', 'Votes spreadsheet ID (blank = this sheet)', 'text'], ['votes_tab', 'Votes tab name', 'text'],
-  ['facebook_url', 'Facebook link', 'text'], ['youtube_url', 'YouTube link', 'text'], ['discord_url', 'Discord link', 'text']];
-function renderSettings(){
+const SETTING_GROUPS = [
+  ['Event', '', [['title', 'Event title', 'text'], ['tagline', 'Tagline', 'text'], ['date', 'Ceremony date and time', 'datetime-local'],
+    ['venue', 'Venue', 'text'], ['stream_url', 'Livestream link', 'text']]],
+  ['Voting & reveal', 'reveal', [['vote_open', 'Voting open', 'bool'], ['reveal_winners', 'Reveal winners on the site', 'bool'],
+    ['show_results', 'Show points on the site', 'bool']]],
+  ['Social links', '', [['facebook_url', 'Facebook link', 'text'], ['youtube_url', 'YouTube link', 'text'], ['discord_url', 'Discord link', 'text']]],
+  ['Votes data', 'voting', [['votes_sheet_id', 'Votes spreadsheet ID (blank = this sheet)', 'text'], ['votes_tab', 'Votes tab name', 'text']]]];
+function settingField([k, label, type]){
   const s = STATE.settings;
-  return `<form id="settings" class="card"><div class="body" style="border:0"><div class="grid">${SETTINGS.map(([k, label, type]) => type === 'bool'
-    ? `<label>${label}<select name="${k}"><option value="TRUE"${s[k] === 'TRUE' ? ' selected' : ''}>Yes</option><option value="FALSE"${s[k] !== 'TRUE' ? ' selected' : ''}>No</option></select></label>`
-    : `<label>${label}<input name="${k}" type="${type}" value="${esc(type === 'datetime-local' ? local(s[k]) : s[k])}"></label>`).join('')}</div>
-    <p class="note">Settings take effect on the site right away (no publish needed). The spreadsheet ID is the long code in the
-    sheet's link: docs.google.com/spreadsheets/d/<b>ID</b>/edit. Map its columns in this sheet's VotesMapping tab.</p><button class="primary">Save settings</button></div></form>
-    <div class="card"><div class="body" style="border:0"><b>Votes datasource</b><p class="note" style="margin-bottom:0">${STATE.votesInfo.error ? esc(STATE.votesInfo.error)
-      : `<a href="${esc(STATE.votesInfo.url)}" target="_blank">${esc(STATE.votesInfo.name)}</a> → tab “${esc(STATE.votesInfo.tab)}” · ${STATE.votesInfo.rows} vote rows`
-      + (STATE.votesInfo.missing.length ? ` · <b style="color:var(--bad)">columns not found for: ${esc(STATE.votesInfo.missing.join(', '))}</b>` : ' · all columns mapped')}</p></div></div>`;
+  return type === 'bool'
+    ? `<label>${label}<select name="${k}" class="${s[k] === 'TRUE' ? 'yes' : 'no'}"><option value="TRUE"${s[k] === 'TRUE' ? ' selected' : ''}>Yes</option><option value="FALSE"${s[k] !== 'TRUE' ? ' selected' : ''}>No</option></select></label>`
+    : `<label>${label}<input name="${k}" type="${type}" value="${esc(type === 'datetime-local' ? local(s[k]) : s[k])}"></label>`;
+}
+function renderSettings(){
+  const vi = STATE.votesInfo;
+  const source = vi.error ? `<b style="color:var(--bad)">${esc(vi.error)}</b>`
+    : `Reading <a href="${esc(vi.url)}" target="_blank">${esc(vi.name)}</a> → tab “${esc(vi.tab)}” · ${vi.rows} vote rows`
+      + (vi.missing.length ? ` · <b style="color:var(--bad)">columns not found for: ${esc(vi.missing.join(', '))}</b>` : ' · all columns mapped');
+  return `<form id="settings" class="card"><div class="body" style="border:0">${SETTING_GROUPS.map(([title, cls, fields]) =>
+    `<fieldset class="${cls}"><legend>${title}</legend><div class="grid">${fields.map(settingField).join('')}</div>
+     ${title === 'Votes data' ? `<p class="note">${source}<br>The spreadsheet ID is the long code in its link: docs.google.com/spreadsheets/d/<b>ID</b>/edit. Map its columns in this sheet's VotesMapping tab.</p>` : ''}
+     ${title === 'Voting & reveal' ? '<p class="note">After the ceremony: Voting open → No, Reveal winners → Yes, then Publish.</p>' : ''}</fieldset>`).join('')}
+    <div class="row"><button class="primary">Save settings</button><span class="meta">Settings go live on the site right away; no publish needed.</span></div></div></form>`;
 }
 
 function renderActivity(){
@@ -206,6 +244,17 @@ function renderActivity(){
 
 function render(){
   $('#me').textContent = STATE.email;
+  const st = STATE.settings, cats = STATE.categories;
+  const ballots = cats.reduce((n, c) => n + (Number(c.ballots) || 0), 0);
+  $('#status').innerHTML = [
+    st.vote_open === 'TRUE' ? '<span class="pill on"><i></i>Voting open</span>' : '<span class="pill off"><i></i>Voting closed</span>',
+    st.reveal_winners === 'TRUE' ? '<span class="pill on"><i></i>Winners revealed</span>' : '<span class="pill"><i></i>Winners hidden</span>',
+    STATE.unpublished ? '<span class="pill warn"><i></i>Unpublished changes</span>' : '<span class="pill on"><i></i>Site up to date</span>',
+    `<span class="pill">${cats.length} categories · ${STATE.nominees.length} nominees · ${ballots} ballots</span>`,
+    STATE.proposals.length ? `<span class="pill warn" style="cursor:pointer" data-tab="proposals"><i></i>${STATE.proposals.length} proposals to review</span>` : ''
+  ].join('');
+  $('#publish').classList.toggle('dirty', !!STATE.unpublished);
+  $('#publish').title = STATE.unpublished ? 'Changes since the last publish are not on the website yet' : 'The website is up to date';
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === TAB));
   $('[data-tab=proposals]').textContent = STATE.proposals.length ? `Proposals (${STATE.proposals.length})` : 'Proposals';
   $('#main').innerHTML = {proposals:renderProposals, categories:renderCategories, results:renderResults, settings:renderSettings, activity:renderActivity}[TAB]();
@@ -227,6 +276,7 @@ const data = f => Object.fromEntries(new FormData(f).entries());
 const iso = v => v ? new Date(v).toISOString() : '';
 
 document.addEventListener('change', e => {
+  if (e.target.matches('select.yes, select.no')) e.target.className = e.target.value === 'TRUE' ? 'yes' : 'no';
   const f = e.target.closest('.catform'); if (f) syncForm(f);
   if (e.target.classList.contains('win')){
     const ids = [...document.querySelectorAll(`.win[data-cat="${e.target.dataset.cat}"]`)].filter(x => x.checked).map(x => x.dataset.id);
@@ -250,7 +300,7 @@ document.addEventListener('submit', e => {
 });
 
 document.addEventListener('click', e => {
-  const t = e.target.closest('button,[data-open]'); if (!t) return;
+  const t = e.target.closest('button,[data-open],.pill[data-tab]'); if (!t) return;
   if (t.dataset.tab){ TAB = t.dataset.tab; render(); return; }
   if (t.id === 'addcat'){ $('#newcat').innerHTML = `<div class="card"><div class="body" style="border:0">${categoryForm()}</div></div>`; syncForm($('#newcat form')); return; }
   if ('cancel' in t.dataset){ $('#newcat').innerHTML = ''; return; }

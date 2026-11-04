@@ -104,3 +104,22 @@ They get wired into the website, and you're done.
 | "You need permission" | Share the Sheet with them as Editor |
 | Changed the code later | **Deploy → Manage deployments** → ✏️ → Version: **New version** → **Deploy** (keeps the same links). Do it for both deployments |
 | Website not updating | Wait 5 minutes after **Publish to site**; Google refreshes the published sheet slowly |
+
+---
+
+## After the ceremony — make the page permanent (Archive)
+
+1. Admin dashboard → **Results**: tick each winner. **Categories**: tick winners of special awards.
+2. **Settings** → Voting open: **No**, Reveal winners: **Yes** → **Save settings** → **Publish to site**.
+3. Wait 5 minutes.
+4. Open https://github.com/benburnsred/anivote/actions/workflows/pages.yml
+5. Click **Run workflow** (right side) → type the year (e.g. `2026`) in the box → click the green **Run workflow**.
+6. Wait about 5 minutes. The year's page now runs from files saved in the site, like 2025. It no longer needs the Sheet.
+
+## Updating the dashboard code
+
+When the code changes, paste the new files and push a new version:
+
+1. Apps Script → paste the new `Code.gs`, `Admin` and/or `Committee` (same links as Part 2) → **Ctrl + S**.
+2. **Deploy → Manage deployments** → click **committee** → ✏️ → Version: **New version** → **Deploy**.
+3. Repeat step 2 for **public**.

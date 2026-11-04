@@ -21,6 +21,7 @@ One row per nominee. Rows with the same `category` are grouped, in sheet order. 
 |---|---|---|---|
 | `category` | yes | Best Anime Opening | |
 | `category_description` | no | The opening that never got skipped. | Only needed on one row per category |
+| `category_color` | no | #8aa8ff | Accent colour for that award section. Blank = automatic palette |
 | `nominee` | yes* | lulu. | Leave blank for a category with no nominees yet |
 | `subtitle` | no | Mrs. GREEN APPLE · Frieren Season 2 | Artist, studio, show… |
 | `image` | no | https://…/poster.jpg | Direct image link. Tall (3:4) images look best |

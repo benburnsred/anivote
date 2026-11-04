@@ -292,7 +292,7 @@ function build(rows){
 }
 
 /* ===== Rendering ===== */
-let S = {...DEFAULTS}, CATS = [], lastKey = '', covers = store.get('aw.show.covers', {});
+let S = {...DEFAULTS}, CATS = [], lastKey = '', covers = store.get('aw.show.covers2', {});
 const img = n => n.image || covers[n.search] || '';
 const linkAttrs = n => n.link ? ` href="${esc(n.link)}" target="_blank" rel="noopener"` : '';
 
@@ -455,22 +455,36 @@ async function load(){
   }
 }
 
-// Cover art for nominees with an image_search value and no image (Jikan / MyAnimeList, ~3 requests/s).
+// Cover art for nominees with an image_search value and no image.
+// Looks up poster art by anime title: AniList first (one request for every title), then Jikan / MyAnimeList
+// one at a time for anything AniList missed. Returns {title: imageUrl}.
+async function findCovers(titles){
+  const out = {};
+  try {
+    const query = '{' + titles.map((t, i) => `a${i}:Media(search:${JSON.stringify(t)},type:ANIME,format_not_in:[SPECIAL,OVA,TV_SHORT,MUSIC]){coverImage{extraLarge large}}`).join(' ') + '}';
+    const res = await fetch('https://graphql.anilist.co', {method:'POST', headers:{'Content-Type':'application/json', Accept:'application/json'}, body:JSON.stringify({query})});
+    const j = await res.json(); // AniList still returns the found titles when some are missing
+    titles.forEach((t, i) => { const c = j.data?.['a' + i]?.coverImage; if (c?.extraLarge || c?.large) out[t] = c.extraLarge || c.large; });
+  } catch (e){}
+  for (const t of titles.filter(t => !out[t])){
+    try {
+      const j = await (await fetch('https://api.jikan.moe/v4/anime?limit=1&q=' + encodeURIComponent(t))).json();
+      const u = j.data?.[0]?.images?.webp?.large_image_url || j.data?.[0]?.images?.jpg?.large_image_url;
+      if (u) out[t] = u;
+    } catch (e){}
+    await new Promise(r => setTimeout(r, 450)); // Jikan allows ~3 requests/s
+  }
+  return out;
+}
 let loadingCovers = false;
 async function loadCovers(){
-  if (loadingCovers) return; loadingCovers = true;
-  let got = false;
-  for (const c of CATS) for (const n of c.noms){
-    if (n.image || !n.search || covers[n.search]) continue;
-    try {
-      const j = await (await fetch('https://api.jikan.moe/v4/anime?limit=1&q=' + encodeURIComponent(n.search))).json();
-      const url = j.data?.[0]?.images?.webp?.large_image_url || j.data?.[0]?.images?.jpg?.large_image_url;
-      if (url){ covers[n.search] = url; store.set('aw.show.covers', covers); got = true; }
-    } catch (e){}
-    await new Promise(r => setTimeout(r, 450));
-  }
+  const want = [...new Set(CATS.flatMap(c => c.noms).filter(n => !n.image && n.search && !covers[n.search]).map(n => n.search))];
+  if (loadingCovers || !want.length) return; loadingCovers = true;
+  const found = await findCovers(want);
   loadingCovers = false;
-  if (got){ const y = scrollY; render(); document.querySelectorAll('.cat').forEach(s => s.classList.add('in')); scrollTo(0, y); }
+  if (!Object.keys(found).length) return;
+  Object.assign(covers, found); store.set('aw.show.covers2', covers);
+  const y = scrollY; render(); document.querySelectorAll('.cat').forEach(s => s.classList.add('in')); scrollTo(0, y);
 }
 
 load();

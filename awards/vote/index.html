@@ -145,7 +145,7 @@ footer a{color:var(--accent)}
     </div>
   </main>
 
-  <footer>Song data: Billboard JAPAN Hot Animation (H1 2026) and Anime Corner / Anime!Anime! seasonal polls. Cover art via <a href="https://jikan.moe" target="_blank" rel="noopener">Jikan</a> (MyAnimeList).</footer>
+  <footer>Song data: Billboard JAPAN Hot Animation (H1 2026) and Anime Corner / Anime!Anime! seasonal polls. Cover art via <a href="https://anilist.co" target="_blank" rel="noopener">AniList</a> and <a href="https://jikan.moe" target="_blank" rel="noopener">Jikan</a>.</footer>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -179,16 +179,16 @@ const CATEGORIES = [
     title:'Anime Opening of the Year',
     blurb:'Drag (or tap) each opening into a tier. S = 5 pts, A = 4, B = 3, C = 2, D = 1. Leave any you haven\'t heard in the pool — they score 0.',
     nominees:[
-      {id:'iris-out', song:'IRIS OUT', artist:'Kenshi Yonezu', anime:'Chainsaw Man – The Movie: Reze Arc', q:'Chainsaw Man Movie Reze-hen'},
+      {id:'iris-out', song:'IRIS OUT', artist:'Kenshi Yonezu', anime:'Chainsaw Man – The Movie: Reze Arc', q:'Chainsaw Man Movie: Reze-hen'},
       {id:'lulu', song:'lulu.', artist:'Mrs. GREEN APPLE', anime:'Frieren Season 2', q:'Sousou no Frieren 2nd Season'},
       {id:'aizo', song:'AIZO', artist:'King Gnu', anime:'Jujutsu Kaisen Season 3', q:'Jujutsu Kaisen Shimetsu Kaiyuu'},
       {id:'stella', song:'Stella', artist:'SEKAI NO OWARI', anime:'Jaadugar: A Witch in Mongolia', q:'Tenmaku no Jaadugar'},
-      {id:'hikari-no-uta', song:'Hikari no Uta', artist:'Yuiko Ohara', anime:'Mushoku Tensei Season 3', q:'Mushoku Tensei III'},
+      {id:'hikari-no-uta', song:'Hikari no Uta', artist:'Yuiko Ohara', anime:'Mushoku Tensei Season 3', q:'Mushoku Tensei III: Isekai Ittara Honki Dasu'},
       {id:'recollect', song:'Recollect', artist:'Konomi Suzuki feat. Ashnikko', anime:'Re:ZERO Season 4', q:'Re:Zero kara Hajimeru Isekai Seikatsu 4th Season'},
       {id:'monster', song:'MONSTER', artist:'Eir Aoi', anime:'Classroom of the Elite IV', q:'Youkoso Jitsuryoku Shijou Shugi no Kyoushitsu e 4th Season'},
       {id:'kasuka-na-hana', song:'Kasuka na Hana', artist:'Tatsuya Kitani feat. BABYMETAL', anime:'Hell\'s Paradise Season 2', q:'Jigokuraku 2nd Season'},
       {id:'provant', song:'PROVANT', artist:'SawanoHiroyuki[nZk]', anime:'Fate/strange Fake', q:'Fate/strange Fake'},
-      {id:'sweet-magic', song:'Sweet Magic', artist:'F/ACE', anime:'Tamon\'s B-Side', q:'Tamon-kun Ima Docchi'}
+      {id:'sweet-magic', song:'Sweet Magic', artist:'F/ACE', anime:'Tamon\'s B-Side', q:'Tamon-kun Ima Docchi!?'}
     ]
   }
 ];
@@ -202,7 +202,7 @@ const live = !!APPS_SCRIPT_URL;
 let catIdx = 0;
 let placements = LS.get('aw.drafts', {});   // {catId: {nomineeId: tierId}}
 let submitted = LS.get('aw.submitted', {}); // {catId: true}
-let covers = LS.get('aw.covers', {});       // {nomineeId: imageUrl}
+let covers = LS.get('aw.covers2', {});       // {nomineeId: imageUrl}
 let selected = null;
 
 const $ = s => document.querySelector(s);
@@ -419,18 +419,33 @@ function show(v){
 }
 document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => show(b.dataset.view));
 
-/* ===== Cover art (Jikan, cached; rate limit ~3 req/s) ===== */
-async function loadCovers(){
-  for (const c of CATEGORIES) for (const n of c.nominees){
-    if (covers[n.id]) continue;
+/* ===== Cover art (cached) ===== */
+// Looks up poster art by anime title: AniList first (one request for every title), then Jikan / MyAnimeList
+// one at a time for anything AniList missed. Returns {title: imageUrl}.
+async function findCovers(titles){
+  const out = {};
+  try {
+    const query = '{' + titles.map((t, i) => `a${i}:Media(search:${JSON.stringify(t)},type:ANIME,format_not_in:[SPECIAL,OVA,TV_SHORT,MUSIC]){coverImage{extraLarge large}}`).join(' ') + '}';
+    const res = await fetch('https://graphql.anilist.co', {method:'POST', headers:{'Content-Type':'application/json', Accept:'application/json'}, body:JSON.stringify({query})});
+    const j = await res.json(); // AniList still returns the found titles when some are missing
+    titles.forEach((t, i) => { const c = j.data?.['a' + i]?.coverImage; if (c?.extraLarge || c?.large) out[t] = c.extraLarge || c.large; });
+  } catch (e){}
+  for (const t of titles.filter(t => !out[t])){
     try {
-      const r = await fetch('https://api.jikan.moe/v4/anime?limit=1&q=' + encodeURIComponent(n.q));
-      const j = await r.json();
-      const url = j.data?.[0]?.images?.webp?.large_image_url || j.data?.[0]?.images?.jpg?.large_image_url;
-      if (url){ covers[n.id] = url; LS.set('aw.covers', covers); render(); }
+      const j = await (await fetch('https://api.jikan.moe/v4/anime?limit=1&q=' + encodeURIComponent(t))).json();
+      const u = j.data?.[0]?.images?.webp?.large_image_url || j.data?.[0]?.images?.jpg?.large_image_url;
+      if (u) out[t] = u;
     } catch (e){}
-    await new Promise(r => setTimeout(r, 450));
+    await new Promise(r => setTimeout(r, 450)); // Jikan allows ~3 requests/s
   }
+  return out;
+}
+async function loadCovers(){
+  const want = CATEGORIES.flatMap(c => c.nominees).filter(n => !covers[n.id]);
+  if (!want.length) return;
+  const found = await findCovers([...new Set(want.map(n => n.q))]);
+  want.forEach(n => { if (found[n.q]) covers[n.id] = found[n.q]; });
+  LS.set('aw.covers2', covers); render();
 }
 
 $('#codeField').hidden = !USE_VOTER_CODES;

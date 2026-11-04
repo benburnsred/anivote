@@ -25,7 +25,7 @@ One row per nominee. Rows with the same `category` are grouped, in sheet order. 
 | `nominee` | yes* | lulu. | Leave blank for a category with no nominees yet |
 | `subtitle` | no | Mrs. GREEN APPLE · Frieren Season 2 | Artist, studio, show… |
 | `image` | no | https://…/poster.jpg | Direct image link. Tall (3:4) images look best |
-| `image_search` | no | Sousou no Frieren 2nd Season | If `image` is blank, cover art is looked up on MyAnimeList by this name |
+| `image_search` | no | Sousou no Frieren 2nd Season | If `image` is blank, cover art is looked up on AniList (then MyAnimeList) by this anime title. Use `image` to pick an exact picture |
 | `link` | no | https://youtube.com/… | Makes the card clickable |
 | `winner` | no | TRUE | `TRUE`, `yes` or `x` marks the winner. Shown only when `reveal_winners` is on |
 | `result` | no | 412 pts · 31% | Free text under the nominee. Shown only when `show_results` is on |
@@ -122,7 +122,7 @@ The script checks every ballot, so a tampered page can't change the scoring or i
 
 Add entries to `CATEGORIES` in `vote/index.html`, and add the same nominee ids to `NOMINEES` in `Code.gs` (redeploy afterwards):
 - Each nominee needs a unique `id`.
-- `q` is the search text used to fetch cover art from Jikan (MyAnimeList).
+- `q` is the anime title used to look up cover art (AniList, then MyAnimeList).
 
 When there's more than one category, category tabs appear automatically.
 

@@ -36,9 +36,8 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:100;op
 .brand svg{width:22px;height:22px;flex:none}
 .btn{position:relative;display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line2);background:rgba(255,255,255,.04);color:var(--ink);padding:12px 22px;border-radius:0;font:700 13px/1 var(--sans);letter-spacing:.08em;text-transform:uppercase;text-decoration:none;cursor:pointer;white-space:nowrap;transition:transform .2s var(--ease),background .2s,border-color .2s;overflow:hidden}
 .btn:hover{transform:translateY(-1px);border-color:rgba(255,255,255,.3);background:rgba(255,255,255,.08)}
-.btn.gold{background:var(--metal);color:#241804;border-color:transparent;box-shadow:0 8px 30px rgba(233,196,106,.28),inset 0 1px 0 rgba(255,255,255,.6)}
-.btn.gold::after{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 35%,rgba(255,255,255,.65) 50%,transparent 65%);transform:translateX(-120%);animation:sheen 4.5s 1.5s infinite}
-@keyframes sheen{0%,70%{transform:translateX(-120%)}100%{transform:translateX(120%)}}
+.btn.gold{border-color:rgba(233,196,106,.45)}
+.btn.gold:hover{border-color:rgba(233,196,106,.8)}
 .btn.sm{padding:10px 16px;font-size:12px}
 
 /* ===== Hero ===== */
@@ -66,7 +65,8 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:100;op
 .t3{font-weight:700;font-size:clamp(24px,4.6vw,56px);letter-spacing:.5em;padding-left:.5em}
 .rule{width:min(440px,62vw);height:2px;margin:14px auto 26px;background:linear-gradient(90deg,transparent,#c99a3c 15%,#fff1c1 50%,#c99a3c 85%,transparent)}
 .cup{display:none;width:clamp(220px,24vw,360px);max-height:70vh;object-fit:contain;filter:drop-shadow(0 30px 50px rgba(0,0,0,.7)) drop-shadow(0 0 60px rgba(233,196,106,.2))}
-@media (min-width:1000px){.hero-grid.has-cup{grid-template-columns:1fr auto}.has-cup .cup{display:block}}
+@media (min-width:1000px){.hero-grid.has-cup{grid-template-columns:minmax(0,1fr) auto;gap:clamp(20px,3vw,56px)}.has-cup .cup{display:block;width:clamp(200px,20vw,300px)}
+  .has-cup .t2{font-size:clamp(46px,7.4vw,112px)}.has-cup .t1{font-size:clamp(17px,2.4vw,36px)}.has-cup .t3{font-size:clamp(24px,3.4vw,50px)}.has-cup .branch{height:clamp(200px,27vw,390px)}}
 .tagline{color:#d4cfdc;font-size:clamp(15px,2vw,19px);max-width:620px;margin:0 auto;font-weight:500}
 .when{display:inline-flex;align-items:center;gap:14px;margin-top:26px;font:700 12px/1 var(--sans);letter-spacing:.24em;text-transform:uppercase;color:var(--muted)}
 .when::before,.when::after{content:"";width:40px;height:1px;background:linear-gradient(90deg,transparent,var(--gold))}
@@ -76,9 +76,6 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:100;op
 .count b{display:block;font:800 34px/1 var(--serif);font-variant-numeric:tabular-nums}
 .count span{display:block;margin-top:6px;font-size:10px;letter-spacing:.28em;text-transform:uppercase;color:var(--muted);font-weight:700}
 .ctas{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:34px}
-.scroll-cue{position:absolute;bottom:26px;left:50%;transform:translateX(-50%);width:22px;height:36px;border:1.5px solid var(--line2);border-radius:0}
-.scroll-cue::after{content:"";position:absolute;left:50%;top:7px;width:3px;height:7px;margin-left:-1.5px;border-radius:0;background:var(--gold);animation:cue 2s infinite}
-@keyframes cue{0%{opacity:0;transform:translateY(0)}40%{opacity:1}100%{opacity:0;transform:translateY(12px)}}
 
 /* ===== Category nav ===== */
 .catnav{position:sticky;top:64px;z-index:30;background:rgba(6,6,11,.78);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-block:1px solid var(--line)}
@@ -120,6 +117,14 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:100;op
 .cap.tba .name{color:var(--dim);font-weight:700;letter-spacing:.14em;text-transform:uppercase;font-size:11px}
 .cap.tba::after{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.045) 50%,transparent 65%);animation:shim 2.8s infinite}
 @keyframes shim{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
+
+.winners{padding-top:110px;padding-bottom:20px;text-align:center}
+.winners .grid{text-align:left}
+.winners h2{font:900 clamp(30px,5.5vw,60px)/1.05 var(--serif);text-transform:uppercase;letter-spacing:.04em;margin:14px 0 10px}
+.winners .cat-desc{margin-bottom:44px}
+.wcard .kick{position:absolute;top:0;left:0;right:0;padding:12px 14px 30px;text-align:left;font:800 10.5px/1.3 var(--sans);letter-spacing:.18em;text-transform:uppercase;color:var(--c);background:linear-gradient(rgba(6,6,11,.85),transparent)}
+.wcard{box-shadow:0 20px 40px -18px rgba(0,0,0,.8),0 0 0 1px color-mix(in srgb,var(--c) 55%,transparent)}
+.wcard .res{margin-top:6px;font-size:12px;font-weight:800;color:var(--gold)}
 
 /* Winner spotlight */
 .stage{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:22px;align-items:stretch}
@@ -213,15 +218,15 @@ footer .links a:hover{color:var(--gold)}
     <div class="ctas">
       <a class="btn gold" id="heroVote" href="vote/" hidden>Cast your vote</a>
       <a class="btn" id="heroWatch" href="#" target="_blank" rel="noopener" hidden>▶&nbsp; Watch live</a>
-      <a class="btn" href="#categories">Explore the awards</a>
+      <a class="btn" id="heroExplore" href="#categories">Explore the awards</a>
     </div>
    </div>
     <img class="cup" id="cup" alt="" hidden>
   </div>
-  <div class="scroll-cue" aria-hidden="true"></div>
 </section>
 
 <nav class="catnav" id="catnav" hidden><div class="wrap" id="catlinks"></div></nav>
+<section class="wrap winners" id="winners" hidden></section>
 <main class="wrap" id="categories"><div class="note">Loading the nominees…</div></main>
 
 <footer>
@@ -359,8 +364,18 @@ function render(){
   tick();
 
 
+  // Winners at a glance, once any winner is revealed.
+  const winners = reveal ? CATS.map(c => [c, c.noms.find(n => n.winner)]).filter(([, w]) => w) : [];
+  $('#winners').hidden = !winners.length;
+  $('#winners').innerHTML = winners.length ? `<div class="cat-kicker" style="--c:var(--gold)">${esc(S.title)}</div><h2><span class="metal">The Winners</span></h2>
+    <p class="cat-desc">${winners.length < CATS.length ? `${winners.length} of ${CATS.length} awards revealed so far. Tap a winner for the full category.` : 'Every award, at a glance. Tap a winner for the full category and results.'}</p>
+    <div class="grid">${winners.map(([c, w]) => { const u = img(w); return `<a class="cap wcard" href="#${c.id}" style="--c:${c.color}"><div class="art"${bg(u)}></div>${u ? '' : `<div class="mono">${esc(initials(w.name))}</div>`}
+      <div class="glare"></div><div class="kick">★ ${esc(c.name)}</div><div class="info"><div class="name">${esc(w.name)}</div>${w.sub ? `<div class="sub">${esc(w.sub)}</div>` : ''}${showRes && w.result ? `<div class="res">${esc(w.result)}</div>` : ''}</div></a>`; }).join('')}</div>` : '';
+  $('#heroExplore').textContent = winners.length ? 'See the winners' : 'Explore the awards';
+  $('#heroExplore').href = winners.length ? '#winners' : '#categories';
+
   $('#catnav').hidden = !CATS.length;
-  $('#catlinks').innerHTML = CATS.map(c => `<a href="#${c.id}" style="--c:${c.color}">${esc(c.name)}${reveal && c.noms.some(n => n.winner) ? '<span class="dot"></span>' : ''}</a>`).join('');
+  $('#catlinks').innerHTML = (winners.length ? '<a href="#winners" style="--c:var(--gold)">★ Winners</a>' : '') + CATS.map(c => `<a href="#${c.id}" style="--c:${c.color}">${esc(c.name)}${reveal && c.noms.some(n => n.winner) ? '<span class="dot"></span>' : ''}</a>`).join('');
 
   $('#categories').innerHTML = CATS.length ? CATS.map((c, i) => {
     const hasWin = reveal && c.noms.some(n => n.winner);
@@ -413,7 +428,7 @@ document.addEventListener('pointerout', e => {
 addEventListener('scroll', () => {
   $('#top').classList.toggle('solid', scrollY > 40);
   let cur = '';
-  document.querySelectorAll('.cat').forEach(s => { if (s.getBoundingClientRect().top < 200) cur = s.id; });
+  document.querySelectorAll('#winners:not([hidden]), .cat').forEach(s => { if (s.getBoundingClientRect().top < 200) cur = s.id; });
   document.querySelectorAll('#catlinks a').forEach(a => {
     const on = a.getAttribute('href') === '#' + cur;
     // Scroll the nav strip itself; scrollIntoView would cancel the page's smooth scroll.

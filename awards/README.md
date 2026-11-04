@@ -47,7 +47,9 @@ Two columns, `key` and `value`:
 | `show_results` | FALSE | Show the `result` text (points, percentages) |
 | `trophy_image` | https://…/trophy.png | Trophy picture beside the title on laptops and tablets. Blank = no trophy. A transparent PNG looks best |
 
-For a live ceremony, set `reveal_winners` to TRUE and fill in each `winner` cell as you announce it. Open pages re-check the sheet every 60 seconds, and Google's published copy can lag by a few minutes.
+For a live ceremony, set `reveal_winners` to TRUE and fill in each `winner` cell as you announce it. As soon as one winner is revealed, a **The Winners** summary appears under the title, with one card per award linking to its full category, and the hero button changes to **See the winners**.
+
+**After the awards:** keep `reveal_winners` TRUE, set `vote_open` to FALSE to hide the vote buttons, and optionally set `show_results` to TRUE with points or percentages in the `result` column. The page then works as a permanent results page. Open pages re-check the sheet every 60 seconds, and Google's published copy can lag by a few minutes.
 
 ## Managing it from Google Sheets
 

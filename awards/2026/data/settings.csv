@@ -9,3 +9,6 @@ vote_open,TRUE
 reveal_winners,FALSE
 show_results,FALSE
 trophy_image,../img/trophy.webp
+facebook_url,https://www.facebook.com/AnimexAngas
+youtube_url,https://www.youtube.com/@AnimexAngas
+discord_url,https://discord.gg/AnimexAngas

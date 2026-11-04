@@ -259,8 +259,9 @@ footer .big{font:900 clamp(22px,4vw,34px)/1.1 var(--serif);text-transform:upperc
 /* ===== Config =====
  * Where the awards content comes from. Use the bundled CSVs, or a Google Sheet tab published as CSV
  * (File → Share → Publish to web → pick the tab → CSV). See awards/README.md for the column layout. */
-const NOMINEES_CSV = 'data/nominees.csv';
-const SETTINGS_CSV = 'data/settings.csv';
+// Published Site and Settings tabs of the 2026 Google Sheet (testing: agonoy.ben's account).
+const NOMINEES_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT3drRB6t5qgQb6EKA2cZwP7eNJpywJvxW_z9jskSucv6jBLtzgA3g93ZaRmCcaw_roiKJry41ADMf-/pub?gid=636394&single=true&output=csv';
+const SETTINGS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT3drRB6t5qgQb6EKA2cZwP7eNJpywJvxW_z9jskSucv6jBLtzgA3g93ZaRmCcaw_roiKJry41ADMf-/pub?gid=738431832&single=true&output=csv';
 const HOSTS_CSV = 'data/hosts.csv'; // optional: name, nickname, image, role
 const REFRESH_SECONDS = 60; // re-check the sheet so winners appear live during the ceremony
 

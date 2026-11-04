@@ -230,6 +230,10 @@ Everything here is self-contained: pages link to each other with relative paths,
 ## Hosting
 
 - **Now (testing and development):** the Google Sheet and Apps Script run on the repo owner's personal Google account.
+  - Sheet: https://docs.google.com/spreadsheets/d/1cuj9sGnpjmltqg7PG16baC7fxtFll_TSfaAcSiDdsv4/edit
+  - Committee page: https://script.google.com/macros/s/AKfycbys-lShR1nS3OCaCsEGdYPpIhQyuOyaPIy8RbdMzXE6V0doSdHgmTsFX705oQUgbDIEUQ/exec?page=committee
+  - Admin dashboard: https://script.google.com/macros/s/AKfycbys-lShR1nS3OCaCsEGdYPpIhQyuOyaPIy8RbdMzXE6V0doSdHgmTsFX705oQUgbDIEUQ/exec?page=admin
+  - The 2026 page and the ballot read that Sheet's published Site and Settings tabs, and send votes to its public deployment.
 - **Production:** everything moves to **animexangas@gmail.com**: the Sheet, the Apps Script deployments and, later, this repository (as its own `awards` repo).
 
 To move the Sheet:

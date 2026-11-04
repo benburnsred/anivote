@@ -185,12 +185,13 @@ footer a{color:var(--muted)}
 <script>
 /* ===== Config ===== */
 // Paste your Apps Script web app URL here (see awards/README.md). Empty = demo mode (votes saved in this browser only).
-const APPS_SCRIPT_URL = '';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwz3VTQcz3j7UNmKxweMNhJQ_58esrlg497DA6JyUbjsyFGiCX1XQDbGj5l3I93DNkc4w/exec';
 
 // The ballot reads its categories and nominees from the current awards edition, so both pages always match.
 // Categories without nominees show as "coming soon". Use the same URLs as that edition's page (CSV files or published Sheet tabs).
-const NOMINEES_CSV = '../2026/data/nominees.csv';
-const SETTINGS_CSV = '../2026/data/settings.csv';
+// Published Site and Settings tabs of the 2026 Google Sheet (testing: agonoy.ben's account).
+const NOMINEES_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT3drRB6t5qgQb6EKA2cZwP7eNJpywJvxW_z9jskSucv6jBLtzgA3g93ZaRmCcaw_roiKJry41ADMf-/pub?gid=636394&single=true&output=csv';
+const SETTINGS_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT3drRB6t5qgQb6EKA2cZwP7eNJpywJvxW_z9jskSucv6jBLtzgA3g93ZaRmCcaw_roiKJry41ADMf-/pub?gid=738431832&single=true&output=csv';
 
 // true = voters also enter a one-time code from the Codes tab. false = name only (one ballot per name per category).
 const USE_VOTER_CODES = false;
@@ -604,7 +605,13 @@ loadData().then(() => {
   const openIdx = CATEGORIES.findIndex(c => c.nominees.length && !isClosed(c));
   catIdx = openIdx >= 0 ? openIdx : Math.max(0, CATEGORIES.findIndex(c => c.nominees.length));
   render(); loadCovers();
-}).catch(e => { $('#catTitle').textContent = 'Ballot unavailable'; $('#catBlurb').textContent = `Couldn't load the categories (${e.message}). Please try again later.`; $('#ballot').hidden = true; });
+}).catch(e => {
+  const none = e.message === 'No categories found';
+  $('#modeBadge').hidden = live;
+  $('#catTitle').textContent = none ? 'Voting opens soon' : 'Ballot unavailable';
+  $('#catBlurb').textContent = none ? 'The categories and nominees haven\'t been announced yet. Check back soon!' : `Couldn't load the categories (${e.message}). Please try again later.`;
+  $('#ballot').hidden = true;
+});
 </script>
 </body>
 </html>

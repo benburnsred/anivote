@@ -92,6 +92,7 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:100;op
 .cat::before{content:"";position:absolute;top:0;bottom:0;left:50%;width:100vw;transform:translateX(-50%);z-index:-1;background:radial-gradient(45% 260px at 50% 200px,color-mix(in srgb,var(--c) 15%,transparent),transparent 100%);pointer-events:none}
 .cat-head{position:relative;text-align:center;margin-bottom:44px}
 .cat-num{position:absolute;left:50%;top:-78px;transform:translateX(-50%);font:900 clamp(110px,18vw,200px)/1 var(--serif);color:transparent;-webkit-text-stroke:1px color-mix(in srgb,var(--c) 22%,transparent);z-index:-1;user-select:none;pointer-events:none}
+.cat-trophy{width:clamp(110px,14vw,150px);aspect-ratio:1;margin:0 auto 22px;border-radius:50%;background:#14121c center/cover;box-shadow:0 0 0 3px #c99a3c,0 0 0 5px rgba(255,241,193,.4),0 20px 50px -14px rgba(0,0,0,.9),0 0 60px -14px color-mix(in srgb,var(--c) 60%,transparent)}
 .cat-kicker{display:inline-flex;align-items:center;gap:10px;font:700 11px/1 var(--sans);letter-spacing:.34em;text-transform:uppercase;color:var(--c)}
 .cat-kicker::before,.cat-kicker::after{content:"";width:28px;height:1px;background:var(--c);opacity:.6}
 .cat h2{font:900 clamp(28px,5vw,54px)/1.05 var(--serif);text-transform:uppercase;letter-spacing:.03em;margin:14px 0 10px;text-wrap:balance}
@@ -313,6 +314,7 @@ function build(rows){
     if (!c){ c = byName[name] = {name, id:slug(name), desc:'', color:'', noms:[]}; cats.push(c); }
     if (r.category_description && !c.desc) c.desc = r.category_description;
     if (r.category_color && !c.color) c.color = safeColor(r.category_color);
+    if (r.category_image && !c.trophy) c.trophy = safeUrl(r.category_image);
     if (r.nominee) c.noms.push({name:r.nominee, sub:r.subtitle, image:safeUrl(r.image), search:r.image_search, link:safeUrl(r.link), winner:yes(r.winner), result:r.result, avatar:/avatar/i.test(r.image_style || '')});
   }
   cats.forEach((c, i) => c.color ||= PALETTE[i % PALETTE.length]);
@@ -398,6 +400,7 @@ function render(){
         : Array.from({length:5}, () => '<div class="cap tba rv"><div class="mono">?</div><div class="info"><div class="name">To be announced</div></div></div>').join('')}</div>`;
     return `<section class="cat" id="${c.id}" style="--c:${c.color}"><div class="cat-head rv">
       <div class="cat-num" aria-hidden="true">${String(i + 1).padStart(2, '0')}</div>
+      ${c.trophy ? `<div class="cat-trophy"${bg(c.trophy)} role="img" aria-label="${esc(c.name)} trophy"></div>` : ''}
       <div class="cat-kicker">Award ${String(i + 1).padStart(2, '0')}</div>
       <h2>${esc(c.name)}</h2>${c.desc ? `<p class="cat-desc">${esc(c.desc)}</p>` : ''}${state}</div>${body}</section>`;
   }).join('') : '<div class="note">Categories will be announced soon. Stay tuned.</div>';

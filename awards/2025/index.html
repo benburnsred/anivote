@@ -175,10 +175,8 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:100;op
 .note{color:var(--muted);text-align:center;padding:120px 16px}
 .err{color:#ffb4b4}
 footer{position:relative;margin-top:120px;padding:70px 0 60px;text-align:center;border-top:1px solid var(--line);background:radial-gradient(50% 100% at 50% 100%,rgba(233,196,106,.08),transparent 70%)}
+footer .rights{margin-top:26px;color:var(--dim);font-size:12px;letter-spacing:.06em}
 footer .big{font:900 clamp(22px,4vw,34px)/1.1 var(--serif);text-transform:uppercase;letter-spacing:.04em;margin:0 0 20px}
-footer .links{margin-top:26px;color:var(--dim);font-size:13px}
-footer .links a{color:var(--muted);text-decoration:none;margin:0 10px}
-footer .links a:hover{color:var(--gold)}
 
 @media (max-width:860px){
   .win-trophy{position:relative;top:auto;left:auto;width:110px;margin:22px auto 0}
@@ -253,7 +251,7 @@ footer .links a:hover{color:var(--gold)}
     <p class="big"><span class="metal" id="footTitle">Anime X Angas Awards</span></p>
     <a class="btn gold" id="footVote" href="../vote/" hidden>Cast your vote</a>
     <div class="socials" id="footSocials" style="justify-content:center;margin-top:26px"></div>
-    <div class="links"><a href="../vote/" id="footBallot">Ballot</a><a href="#categories">Categories</a><a href="../../">AniVote polls</a></div>
+    <div class="rights" id="rights"></div>
   </div>
 </footer>
 
@@ -385,7 +383,8 @@ function render(){
   $('.hero-grid').classList.toggle('has-cup', !!cup); $('#cup').hidden = !cup; if (cup && $('#cup').getAttribute('src') !== cup) $('#cup').src = cup;
   $('#tagline').textContent = S.tagline;
   const voteUrl = safeUrl(S.vote_url) || '../vote/';
-  ['#topVote', '#heroVote', '#footVote', '#footBallot'].forEach(id => { $(id).hidden = !voteOpen; $(id).href = voteUrl; });
+  ['#topVote', '#heroVote', '#footVote'].forEach(id => { $(id).hidden = !voteOpen; $(id).href = voteUrl; });
+  $('#rights').textContent = `© ${(String(S.title).match(/\d{4}/) || [new Date().getFullYear()])[0]} Anime x Angas. All Rights Reserved.`;
   $('#topSocials').innerHTML = $('#footSocials').innerHTML = socialsHTML();
   const watch = safeUrl(S.stream_url); $('#heroWatch').hidden = !watch; if (watch) $('#heroWatch').href = watch;
 

@@ -8,3 +8,4 @@ vote_url,vote/
 vote_open,TRUE
 reveal_winners,FALSE
 show_results,FALSE
+trophy_image,

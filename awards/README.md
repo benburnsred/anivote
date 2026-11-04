@@ -45,6 +45,7 @@ Two columns, `key` and `value`:
 | `vote_open` | TRUE | Show or hide the **Vote now** buttons |
 | `reveal_winners` | FALSE | Turn on at the ceremony. Winners get a gold highlight and move to the front |
 | `show_results` | FALSE | Show the `result` text (points, percentages) |
+| `trophy_image` | https://…/trophy.png | Trophy picture beside the title on laptops and tablets. Blank = no trophy. A transparent PNG looks best |
 
 For a live ceremony, set `reveal_winners` to TRUE and fill in each `winner` cell as you announce it. Open pages re-check the sheet every 60 seconds, and Google's published copy can lag by a few minutes.
 

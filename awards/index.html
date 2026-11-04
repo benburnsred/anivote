@@ -49,13 +49,15 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:100;op
   radial-gradient(60% 50% at 20% 100%,rgba(180,90,30,.22),transparent 70%),
   linear-gradient(180deg,#050508 0%,#0b0905 55%,var(--bg) 100%)}
 .bokeh{position:absolute;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
-.bokeh i{position:absolute;border-radius:50%;background:radial-gradient(circle,var(--b) 0,color-mix(in srgb,var(--b) 35%,transparent) 55%,transparent 70%);mix-blend-mode:screen;animation:float var(--d) ease-in-out infinite alternate}
-@keyframes float{to{transform:translate(var(--tx),var(--ty))}}
+.bokeh i{position:absolute;border-radius:50%;background:radial-gradient(circle,var(--b) 0,color-mix(in srgb,var(--b) 35%,transparent) 55%,transparent 70%);mix-blend-mode:screen;opacity:var(--o);
+  animation:float var(--d) ease-in-out var(--dl) infinite alternate,glow var(--g) ease-in-out var(--dl) infinite alternate}
+@keyframes float{from{transform:translate(0,0) scale(1)}to{transform:translate(var(--tx),var(--ty)) scale(var(--s))}}
+@keyframes glow{from{opacity:var(--o)}to{opacity:calc(var(--o) * .35)}}
 #dust{position:absolute;inset:0;z-index:-1;width:100%;height:100%}
 .hero::after{content:"";position:absolute;inset:auto 0 0;height:30%;background:linear-gradient(transparent,var(--bg));z-index:-1}
 .hero-grid{display:grid;grid-template-columns:1fr;align-items:center;justify-items:center;gap:20px}
 .lockup{display:grid;grid-template-columns:auto auto auto;align-items:center;gap:clamp(4px,1.5vw,18px)}
-.branch{height:clamp(190px,34vw,400px);width:auto;aspect-ratio:120/360;overflow:visible;filter:drop-shadow(0 6px 22px rgba(233,196,106,.25))}
+.branch{height:clamp(210px,38vw,450px);width:auto;aspect-ratio:176/410;filter:drop-shadow(0 6px 22px rgba(233,196,106,.25))}
 .branch.r{transform:scaleX(-1)}
 .hero h1{margin:0;font-family:var(--serif);text-transform:uppercase;line-height:1;display:flex;flex-direction:column;align-items:center}
 .hero h1 span{filter:drop-shadow(0 2px 0 rgba(0,0,0,.45)) drop-shadow(0 14px 40px rgba(233,196,106,.22))}
@@ -63,8 +65,8 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:100;op
 .t2{font-weight:900;font-size:clamp(46px,10.5vw,128px);letter-spacing:.05em;margin:.06em 0 .04em;line-height:.95}
 .t3{font-weight:700;font-size:clamp(24px,4.6vw,56px);letter-spacing:.5em;padding-left:.5em}
 .rule{width:min(440px,62vw);height:2px;margin:14px auto 26px;background:linear-gradient(90deg,transparent,#c99a3c 15%,#fff1c1 50%,#c99a3c 85%,transparent)}
-.cup{display:none;width:clamp(220px,22vw,320px);height:auto;filter:drop-shadow(0 30px 50px rgba(0,0,0,.7)) drop-shadow(0 0 60px rgba(233,196,106,.25))}
-@media (min-width:1000px){.hero-grid{grid-template-columns:1fr auto;justify-items:center}.cup{display:block}}
+.cup{display:none;width:clamp(220px,24vw,360px);max-height:70vh;object-fit:contain;filter:drop-shadow(0 30px 50px rgba(0,0,0,.7)) drop-shadow(0 0 60px rgba(233,196,106,.2))}
+@media (min-width:1000px){.hero-grid.has-cup{grid-template-columns:1fr auto}.has-cup .cup{display:block}}
 .tagline{color:#d4cfdc;font-size:clamp(15px,2vw,19px);max-width:620px;margin:0 auto;font-weight:500}
 .when{display:inline-flex;align-items:center;gap:14px;margin-top:26px;font:700 12px/1 var(--sans);letter-spacing:.24em;text-transform:uppercase;color:var(--muted)}
 .when::before,.when::after{content:"";width:40px;height:1px;background:linear-gradient(90deg,transparent,var(--gold))}
@@ -185,41 +187,6 @@ footer .links a:hover{color:var(--gold)}
     <symbol id="trophy" viewBox="0 0 64 64"><path fill="url(#gold)" d="M18 6h28v6h10v6c0 8-6 14-13 15-2 5-6 8-9 9v6h8l2 8H20l2-8h8v-6c-3-1-7-4-9-9C14 32 8 26 8 18v-6h10V6zm-6 10v2c0 5 3 9 7 10-1-3-1-6-1-9v-3h-6zm34 0v3c0 3 0 6-1 9 4-1 7-5 7-10v-2h-6z"/></symbol>
     <linearGradient id="metalH" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#5a3c0c"/><stop offset=".18" stop-color="#b8862b"/><stop offset=".34" stop-color="#fff3c4"/><stop offset=".46" stop-color="#e9c46a"/><stop offset=".7" stop-color="#9c6b1c"/><stop offset=".86" stop-color="#d9b25a"/><stop offset="1" stop-color="#4a300a"/></linearGradient>
     <linearGradient id="metalV" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff3c4"/><stop offset=".5" stop-color="#c99a3c"/><stop offset="1" stop-color="#6b4a12"/></linearGradient>
-    <radialGradient id="rimIn" cx=".5" cy=".3" r=".7"><stop offset="0" stop-color="#3a2706"/><stop offset="1" stop-color="#8a5f17"/></radialGradient>
-    <linearGradient id="shine" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".55"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
-    <symbol id="branch" viewBox="0 0 120 360"><g id="branchG"></g></symbol>
-    <symbol id="cup" viewBox="0 0 220 340">
-      <ellipse cx="110" cy="300" rx="100" ry="26" fill="#e9c46a" opacity=".12"/>
-      <!-- handles -->
-      <path d="M44 58 C8 50 0 82 12 104 C22 122 40 128 56 140" fill="none" stroke="url(#metalV)" stroke-width="10" stroke-linecap="round"/>
-      <path d="M176 58 C212 50 220 82 208 104 C198 122 180 128 164 140" fill="none" stroke="url(#metalV)" stroke-width="10" stroke-linecap="round"/>
-      <path d="M44 58 C8 50 0 82 12 104" fill="none" stroke="#fff3c4" stroke-width="2" opacity=".6"/>
-      <circle cx="12" cy="104" r="6" fill="url(#metalV)"/><circle cx="208" cy="104" r="6" fill="url(#metalV)"/>
-      <!-- bowl -->
-      <path d="M36 44 C36 128 74 170 96 182 L124 182 C146 170 184 128 184 44 Z" fill="url(#metalH)"/>
-      <g fill="none" stroke-width="1.4" opacity=".55">
-        <path d="M60 48 C62 120 86 164 100 178" stroke="#6b4a12"/><path d="M84 48 C84 120 96 160 104 178" stroke="#fff3c4"/>
-        <path d="M110 48 V178" stroke="#6b4a12"/><path d="M136 48 C136 120 124 160 116 178" stroke="#fff3c4"/><path d="M160 48 C158 120 134 164 120 178" stroke="#6b4a12"/>
-      </g>
-      <path d="M62 50 C64 110 80 150 94 170 L100 170 C88 148 76 110 76 50 Z" fill="url(#shine)" opacity=".8"/>
-      <!-- band -->
-      <path d="M40 92 C70 100 150 100 180 92 L178 104 C150 112 70 112 42 104 Z" fill="url(#metalH)" stroke="#5a3c0c" stroke-width=".8"/>
-      <!-- rim -->
-      <ellipse cx="110" cy="44" rx="74" ry="12" fill="url(#metalH)"/>
-      <ellipse cx="110" cy="44" rx="66" ry="8" fill="url(#rimIn)"/>
-      <!-- stem -->
-      <path d="M96 182 H124 L118 200 H102 Z" fill="url(#metalH)"/>
-      <ellipse cx="110" cy="206" rx="18" ry="8" fill="url(#metalH)"/>
-      <path d="M103 212 H117 L119 236 H101 Z" fill="url(#metalH)"/>
-      <path d="M101 236 C94 244 82 248 74 252 H146 C138 248 126 244 119 236 Z" fill="url(#metalH)"/>
-      <!-- base -->
-      <path d="M68 252 H152 L160 268 H60 Z" fill="url(#metalH)"/>
-      <rect x="56" y="268" width="108" height="8" fill="url(#metalH)"/>
-      <path d="M62 276 H158 L166 322 H54 Z" fill="#111015"/>
-      <path d="M62 276 H158 L160 284 H60 Z" fill="#26232c"/>
-      <rect x="86" y="292" width="48" height="16" fill="url(#metalH)"/>
-      <rect x="50" y="322" width="120" height="8" fill="#1b1a20"/>
-    </symbol>
   </defs>
 </svg>
 
@@ -235,9 +202,9 @@ footer .links a:hover{color:var(--gold)}
   <div class="wrap hero-grid">
    <div>
     <div class="lockup">
-      <svg class="branch l" viewBox="0 0 120 360" aria-hidden="true"><use href="#branch"/></svg>
+      <svg class="branch l" viewBox="-34 -30 176 410" aria-hidden="true"></svg>
       <h1 id="title" aria-label="Anime X Angas Awards"><span class="t1 metal" id="t1">Anime X Angas</span><span class="t2 metal" id="t2">Awards</span><span class="t3 metal" id="t3" hidden></span></h1>
-      <svg class="branch r" viewBox="0 0 120 360" aria-hidden="true"><use href="#branch"/></svg>
+      <svg class="branch r" viewBox="-34 -30 176 410" aria-hidden="true"></svg>
     </div>
     <div class="rule"></div>
     <p class="tagline" id="tagline"></p>
@@ -249,7 +216,7 @@ footer .links a:hover{color:var(--gold)}
       <a class="btn" href="#categories">Explore the awards</a>
     </div>
    </div>
-    <svg class="cup" viewBox="0 0 220 340" aria-hidden="true"><use href="#cup"/></svg>
+    <img class="cup" id="cup" alt="" hidden>
   </div>
   <div class="scroll-cue" aria-hidden="true"></div>
 </section>
@@ -274,7 +241,7 @@ const SETTINGS_CSV = 'data/settings.csv';
 const REFRESH_SECONDS = 60; // re-check the sheet so winners appear live during the ceremony
 
 const DEFAULTS = {title:'Anime X Angas Awards', tagline:'', date:'', venue:'', stream_url:'', vote_url:'vote/',
-  vote_open:'TRUE', reveal_winners:'FALSE', show_results:'FALSE'};
+  vote_open:'TRUE', reveal_winners:'FALSE', show_results:'FALSE', trophy_image:''};
 
 // Accent colour per category, in order. A category_color column in the sheet overrides it.
 const PALETTE = ['#e9c46a', '#8aa8ff', '#ff6b8b', '#4fd1b0', '#c49bff', '#ff9f5a', '#5fd3ef', '#f472b6'];
@@ -379,6 +346,9 @@ function render(){
   $('#t1').textContent = m ? m[1] : ''; $('#t1').hidden = !(m && m[1]);
   $('#t2').textContent = m ? 'Awards' : S.title;
   $('#t3').textContent = m && m[2] || ''; $('#t3').hidden = !(m && m[2]);
+  // Optional trophy photo beside the title on wide screens (a transparent PNG looks best).
+  const cup = safeUrl(S.trophy_image);
+  $('.hero-grid').classList.toggle('has-cup', !!cup); $('#cup').hidden = !cup; if (cup && $('#cup').getAttribute('src') !== cup) $('#cup').src = cup;
   $('#tagline').textContent = S.tagline;
   const voteUrl = safeUrl(S.vote_url) || 'vote/';
   ['#topVote', '#heroVote', '#footVote'].forEach(id => { $(id).hidden = !voteOpen; $(id).href = voteUrl; });
@@ -472,15 +442,15 @@ addEventListener('scroll', () => {
   }
   const [tx, ty] = at(1), [dx, dy] = tan(1);
   out += `<g transform="translate(${tx} ${ty}) rotate(${(Math.atan2(dy, dx) * 180 / Math.PI).toFixed(1)})"><path d="${leaf(30, 9)}" fill="url(#metalH)"/></g>`;
-  document.getElementById('branchG').innerHTML = out;
+  document.querySelectorAll('.branch').forEach(b => b.innerHTML = out);
 })();
 
 // Warm bokeh lights behind the hero.
 (function bokeh(){
   const hues = ['#ffcf7a', '#f2a65a', '#ffe2a8', '#e88a5a', '#ffd38f'];
   $('#bokeh').innerHTML = Array.from({length:26}, () => {
-    const size = 16 + Math.random() ** 2 * Math.min(150, innerWidth * .22), op = .08 + Math.random() * .32;
-    return `<i style="left:${(Math.random() * 100).toFixed(1)}%;top:${(20 + Math.random() * 85).toFixed(1)}%;width:${size.toFixed(0)}px;height:${size.toFixed(0)}px;opacity:${op.toFixed(2)};filter:blur(${(size / 40).toFixed(1)}px);--b:${hues[Math.floor(Math.random() * hues.length)]};--d:${(14 + Math.random() * 16).toFixed(0)}s;--tx:${(Math.random() * 60 - 30).toFixed(0)}px;--ty:${(Math.random() * 60 - 30).toFixed(0)}px"></i>`;
+    const size = 16 + Math.random() ** 2 * Math.min(150, innerWidth * .22), r = (a, b) => a + Math.random() * (b - a);
+    return `<i style="left:${r(-5, 100).toFixed(1)}%;top:${r(10, 100).toFixed(1)}%;width:${size.toFixed(0)}px;height:${size.toFixed(0)}px;filter:blur(${(size / 40).toFixed(1)}px);--b:${hues[Math.floor(Math.random() * hues.length)]};--o:${r(.1, .42).toFixed(2)};--d:${r(16, 30).toFixed(0)}s;--g:${r(5, 11).toFixed(1)}s;--dl:-${r(0, 30).toFixed(1)}s;--tx:${r(-140, 140).toFixed(0)}px;--ty:${r(-110, 50).toFixed(0)}px;--s:${r(.85, 1.2).toFixed(2)}"></i>`;
   }).join('');
 })();
 

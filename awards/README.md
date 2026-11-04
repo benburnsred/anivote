@@ -183,3 +183,35 @@ A simple admin page for the committee, served by the same Apps Script (`apps-scr
    - the same two variables in `vote/index.html`
 
 After that, everything is done from the dashboard. Google's published CSV can take a few minutes to refresh after **Publish to site**.
+
+## Suggestions and locking
+
+- **Nominee suggestions:**
+  - While `suggestions_open` is on, the ballot shows a **Suggest a nominee** form for every category that isn't locked yet.
+  - Suggestions land in the dashboard's **Suggestions** tab. Approving one adds it as a nominee (in any unlocked category), and duplicates are merged.
+- **Lock after publish:**
+  - **Publish to site** locks every public-vote category that has nominees.
+  - While locked, nominees can't be added, edited or deleted, the type and voting method can't change, and suggestions for it close. The name, description and voting window can still be edited.
+  - **Unlock** is on the category, and every lock and unlock is in the activity log.
+
+## Votes datasource
+
+Votes can live in a separate Google Sheet, for example an existing one:
+- Set **Votes spreadsheet ID** and **Votes tab name** in Settings.
+- Map each field to that tab's column header in the `VotesMapping` tab:
+
+| field | meaning | if the column is missing |
+|---|---|---|
+| timestamp | when the vote was cast | left blank |
+| voter | voter name (one ballot per name per category) | — required |
+| code | voter code | ignored |
+| category | category id **or name** | — required |
+| nominee | nominee id **or name** | — required |
+| value | tier letter, rank number, or "pick" | — |
+| points | points for this row | tier letters score their tier points, anything else 1 |
+
+The Settings tab shows which fields are still unmapped. New ballots are written with readable names into a re-mapped sheet, and with ids into the built-in layout. Committee members need view access to the votes sheet to see results. An Excel file has to be converted first (open it in Google Drive → **File → Save as Google Sheets**). For a sheet that's shaped differently, such as one row per ballot like Google Forms, send it over and an adapter can be added.
+
+## Moving to its own repository
+
+Everything here is self-contained: pages link to each other with relative paths, and nothing refers to the repo name. To give the awards their own repo (e.g. `awards`, owned by animexangas), split out only this folder with its history: `git subtree split --prefix=awards -b awards-only`. Push that branch as `main` of the new repo, and copy `.github/workflows/pages.yml` there with every `awards/` path prefix removed. The AniVote polls page (repo root `index.html`) stays behind.

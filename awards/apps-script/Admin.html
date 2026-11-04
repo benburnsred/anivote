@@ -22,6 +22,7 @@ main{max-width:1000px;margin:0 auto;padding:18px}
 .tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;background:#eee;color:#444;margin-left:6px}
 .tag.special{background:#fbefd5;color:#8a5a00}
 .tag.closed{background:#fde4e1;color:var(--bad)}
+.tag.locked{background:#e4ecfd;color:#2a4a9a}
 button,.btn{font:inherit;border:1px solid var(--line);background:#fff;border-radius:6px;padding:6px 12px;cursor:pointer}
 button:hover{border-color:#bbb}
 button.primary{background:var(--ink);color:#fff;border-color:var(--ink)}
@@ -50,7 +51,7 @@ h2{font-size:15px;margin:18px 0 10px}
 </head>
 <body>
 <header><h1>Awards Committee</h1><div class="row"><span class="me" id="me"></span><button class="primary" id="publish">Publish to site</button></div></header>
-<nav id="tabs"><button data-tab="categories" class="on">Categories</button><button data-tab="results">Results</button><button data-tab="settings">Settings</button><button data-tab="activity">Activity</button></nav>
+<nav id="tabs"><button data-tab="categories" class="on">Categories</button><button data-tab="suggestions">Suggestions</button><button data-tab="results">Results</button><button data-tab="settings">Settings</button><button data-tab="activity">Activity</button></nav>
 <main id="main"><div id="loading">Loading…</div></main>
 <div id="toast"></div>
 
@@ -116,8 +117,12 @@ function renderCategories(){
   const cats = STATE.categories;
   const list = cats.map((c, i) => {
     const noms = nomsOf(c.id), winners = noms.filter(n => n.winner === 'TRUE');
-    const status = c.type === 'special' ? '<span class="tag special">Special</span>' : open(c) ? '' : '<span class="tag closed">Voting closed</span>';
+    const locked = c.locked === 'TRUE';
+    const status = (c.type === 'special' ? '<span class="tag special">Special</span>' : open(c) ? '' : '<span class="tag closed">Voting closed</span>')
+      + (locked ? '<span class="tag locked">Locked</span>' : '');
     const body = OPEN !== c.id ? '' : `<div class="body">
+      ${locked ? `<div class="hint">Locked since it was published for voting: nominees and voting method can't change, so every voter sees the same ballot.
+        <button data-unlock="${c.id}" style="margin-left:8px">Unlock</button></div>` : ''}
       ${categoryForm(c)}
       <h2>Nominees (${noms.length})</h2>
       ${c.type === 'special' ? '<p class="note">Tick the winner(s). Special awards don\'t appear on the ballot.</p>' : ''}
@@ -126,8 +131,8 @@ function renderCategories(){
           <td>${n.image ? `<img class="thumb" src="${esc(n.image)}" alt="">` : '<span class="thumb"></span>'}</td>
           <td>${esc(n.name)}</td><td class="meta">${esc(n.subtitle)}</td>
           ${c.type === 'special' ? `<td><input type="checkbox" class="win" data-cat="${c.id}" data-id="${n.id}"${n.winner === 'TRUE' ? ' checked' : ''} style="width:auto"></td>` : ''}
-          <td class="num"><button class="icon" data-editnom="${n.id}">Edit</button> <button class="icon danger" data-delnom="${n.id}">Delete</button></td></tr>`).join('')}</table>` : '<p class="note">No nominees yet.</p>'}
-      <h2>Add a nominee</h2>${nomineeForm(c.id)}
+          <td class="num">${locked ? '' : `<button class="icon" data-editnom="${n.id}">Edit</button> <button class="icon danger" data-delnom="${n.id}">Delete</button>`}</td></tr>`).join('')}</table>` : '<p class="note">No nominees yet.</p>'}
+      ${locked ? '' : `<h2>Add a nominee</h2>${nomineeForm(c.id)}`}
       <div class="row" style="margin-top:14px"><span class="spacer"></span><button class="danger" data-delcat="${c.id}">Delete category</button></div>
     </div>`;
     return `<div class="card"><div class="head" data-open="${c.id}">
@@ -139,9 +144,24 @@ function renderCategories(){
     <div id="newcat"></div>${list || '<p class="note">No categories yet. Add the first one.</p>'}`;
 }
 
+/* ===== Suggestions ===== */
+function renderSuggestions(){
+  const list = STATE.suggestions;
+  const opts = sel => STATE.categories.filter(c => c.locked !== 'TRUE').map(c => `<option value="${c.id}"${c.id === sel ? ' selected' : ''}>${esc(c.name)}</option>`).join('');
+  return `<p class="note">Nominees suggested by the public (${STATE.settings.suggestions_open === 'TRUE' ? 'suggestions are <b>open</b>' : 'suggestions are <b>closed</b>'}, change it in Settings). Approving adds the nominee to the chosen category; duplicates are merged.</p>
+    ${list.length ? `<div class="card"><div class="body" style="border:0"><table><tr><th>Nominee</th><th>Suggested for</th><th>By</th><th>Note</th><th>Add to</th><th></th></tr>
+    ${list.map(x => { const c = STATE.categories.find(k => k.id === x.Category);
+      return `<tr><td><b>${esc(x.Nominee)}</b></td><td class="meta">${esc(c ? c.name : x.Category)}</td><td class="meta">${esc(x.Name)}</td><td class="meta">${esc(x.Note)}</td>
+      <td><select class="sugcat" data-id="${x.id}">${opts(x.Category)}</select></td>
+      <td class="num"><button class="icon" data-approve="${x.id}">Approve</button> <button class="icon danger" data-reject="${x.id}">Reject</button></td></tr>`; }).join('')}</table></div></div>`
+    : '<p class="note">No pending suggestions.</p>'}`;
+}
+
 /* ===== Results ===== */
 function renderResults(){
   const cats = STATE.categories.filter(c => c.type !== 'special');
+  const vi = STATE.votesInfo;
+  if (vi.error) return `<div class="hint">${esc(vi.error)}. Check the votes sheet ID in Settings, and that you have access to that sheet.</div>`;
   if (!cats.length) return '<p class="note">No public-vote categories yet.</p>';
   return '<p class="note">Only the committee sees this. Ranked by points; ties are broken by first-place picks (S tier, rank 1 or a pick). Tick the winner(s) and publish.</p>' + cats.map(c => {
     const r = STATE.results[c.id] || {};
@@ -160,13 +180,19 @@ function renderResults(){
 const SETTINGS = [['title', 'Event title', 'text'], ['tagline', 'Tagline', 'text'], ['date', 'Ceremony date and time', 'datetime-local'],
   ['venue', 'Venue', 'text'], ['stream_url', 'Livestream link', 'text'], ['vote_open', 'Voting open', 'bool'],
   ['reveal_winners', 'Reveal winners on the site', 'bool'], ['show_results', 'Show points on the site', 'bool'],
+  ['suggestions_open', 'Accept nominee suggestions', 'bool'],
+  ['votes_sheet_id', 'Votes spreadsheet ID (blank = this sheet)', 'text'], ['votes_tab', 'Votes tab name', 'text'],
   ['facebook_url', 'Facebook link', 'text'], ['youtube_url', 'YouTube link', 'text'], ['discord_url', 'Discord link', 'text']];
 function renderSettings(){
   const s = STATE.settings;
   return `<form id="settings" class="card"><div class="body" style="border:0"><div class="grid">${SETTINGS.map(([k, label, type]) => type === 'bool'
     ? `<label>${label}<select name="${k}"><option value="TRUE"${s[k] === 'TRUE' ? ' selected' : ''}>Yes</option><option value="FALSE"${s[k] !== 'TRUE' ? ' selected' : ''}>No</option></select></label>`
     : `<label>${label}<input name="${k}" type="${type}" value="${esc(type === 'datetime-local' ? local(s[k]) : s[k])}"></label>`).join('')}</div>
-    <p class="note">Settings take effect on the site right away (no publish needed).</p><button class="primary">Save settings</button></div></form>`;
+    <p class="note">Settings take effect on the site right away (no publish needed). The spreadsheet ID is the long code in the
+    sheet's link: docs.google.com/spreadsheets/d/<b>ID</b>/edit. Map its columns in this sheet's VotesMapping tab.</p><button class="primary">Save settings</button></div></form>
+    <div class="card"><div class="body" style="border:0"><b>Votes datasource</b><p class="note" style="margin-bottom:0">${STATE.votesInfo.error ? esc(STATE.votesInfo.error)
+      : `<a href="${esc(STATE.votesInfo.url)}" target="_blank">${esc(STATE.votesInfo.name)}</a> → tab “${esc(STATE.votesInfo.tab)}” · ${STATE.votesInfo.rows} vote rows`
+      + (STATE.votesInfo.missing.length ? ` · <b style="color:var(--bad)">columns not found for: ${esc(STATE.votesInfo.missing.join(', '))}</b>` : ' · all columns mapped')}</p></div></div>`;
 }
 
 function renderActivity(){
@@ -177,8 +203,14 @@ function renderActivity(){
 function render(){
   $('#me').textContent = STATE.email;
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === TAB));
-  $('#main').innerHTML = {categories:renderCategories, results:renderResults, settings:renderSettings, activity:renderActivity}[TAB]();
-  document.querySelectorAll('.catform').forEach(syncForm);
+  $('#main').innerHTML = {categories:renderCategories, suggestions:renderSuggestions, results:renderResults, settings:renderSettings, activity:renderActivity}[TAB]();
+  document.querySelectorAll('.catform').forEach(f => {
+    syncForm(f);
+    const c = STATE.categories.find(x => x.id === f.dataset.id);
+    if (c && c.locked === 'TRUE') ['type', 'method', 'max_picks'].forEach(k => f[k].disabled = true);
+  });
+  const n = STATE.suggestions.length;
+  document.querySelector('[data-tab=suggestions]').textContent = n ? `Suggestions (${n})` : 'Suggestions';
 }
 
 // Show only the fields that apply to the chosen type and method.
@@ -221,10 +253,13 @@ document.addEventListener('click', e => {
   if ('cancel' in t.dataset){ $('#newcat').innerHTML = ''; return; }
   if ('cancelNom' in t.dataset){ EDIT_NOM = null; render(); return; }
   if (t.dataset.move){ e.stopPropagation(); call('adminMoveCategory', t.dataset.move, Number(t.dataset.dir)); return; }
+  if (t.dataset.unlock){ if (confirm('Unlock this category? Changing nominees after people have voted can make results unfair.')) call('adminUnlockCategory', t.dataset.unlock); return; }
+  if (t.dataset.approve){ call('adminResolveSuggestion', t.dataset.approve, 'approve', document.querySelector(`.sugcat[data-id="${t.dataset.approve}"]`).value).then(s => s && toast('Added as a nominee')); return; }
+  if (t.dataset.reject){ call('adminResolveSuggestion', t.dataset.reject, 'reject', ''); return; }
   if (t.dataset.editnom){ EDIT_NOM = t.dataset.editnom; render(); return; }
   if (t.dataset.delnom){ if (confirm('Delete this nominee?')) call('adminDeleteNominee', t.dataset.delnom); return; }
   if (t.dataset.delcat){ if (confirm('Delete this category and all its nominees?')){ OPEN = null; call('adminDeleteCategory', t.dataset.delcat); } return; }
-  if (t.id === 'publish'){ if (confirm('Publish categories, nominees and winners to the public site?')) call('adminPublish').then(s => s && toast('Published. The site updates within a few minutes.')); return; }
+  if (t.id === 'publish'){ if (confirm('Publish categories, nominees and winners to the public site? Public-vote categories with nominees will be locked.')) call('adminPublish').then(s => s && toast('Published. The site updates within a few minutes.')); return; }
   if (t.dataset.open && !e.target.closest('button')){ OPEN = OPEN === t.dataset.open ? null : t.dataset.open; EDIT_NOM = null; render(); }
 });
 

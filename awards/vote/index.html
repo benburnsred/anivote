@@ -45,6 +45,7 @@ h1{font:900 clamp(28px,5vw,52px)/1.05 var(--serif);text-transform:uppercase;lett
 .cats button.on{border-color:rgba(233,196,106,.6);color:var(--ink)}
 .cats button .done{color:var(--gold);margin-left:6px}
 .cats button.soon{opacity:.45}
+.suggest{margin-top:22px}.suggest h3{margin:0 0 6px;font:900 16px/1.2 var(--serif);text-transform:uppercase;letter-spacing:.05em}.suggest p{color:var(--muted);margin:0 0 12px}
 .soon{text-align:center;padding:48px 20px}.soon h2{font:900 clamp(20px,3vw,28px)/1.1 var(--serif);text-transform:uppercase;letter-spacing:.03em;margin:0 0 10px}.soon p{color:var(--muted);margin:0 auto;max-width:460px}
 .voter{display:flex;gap:12px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);padding:16px;margin-bottom:18px}
 .voter label{display:flex;flex-direction:column;gap:8px;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);font-weight:700;flex:1 1 200px}
@@ -149,6 +150,16 @@ footer a{color:var(--muted)}
       </div>
     </div>
     </div>
+    <form class="panel suggest" id="suggest" hidden>
+      <h3>Suggest a nominee</h3>
+      <p>Think something's missing from <b id="sugCat"></b>? Suggest it and the committee will review it.</p>
+      <div class="voter" style="background:none;border:0;padding:0;margin:0 0 12px">
+        <label>Your name<input id="sugName" maxlength="40" required autocomplete="nickname"></label>
+        <label>Nominee<input id="sugNominee" maxlength="100" required></label>
+        <label>Why? (optional)<input id="sugNote" maxlength="300"></label>
+      </div>
+      <button class="btn">Send suggestion</button>
+    </form>
   </main>
 
   <main id="doneView" hidden>
@@ -277,7 +288,7 @@ async function loadData(){
     // Published data carries stable ids; the bundled CSV falls back to names (must match slug() in Code.gs).
     const id = r.category_id || slug(r.category);
     const c = byId[id] ||= (CATEGORIES.push({id, title:r.category, blurb:'', nominees:[], method:RULES[r.method] ? r.method : 'tier',
-      max:parseInt(r.max_picks, 10) || 3, opens:r.opens, closes:r.closes}), CATEGORIES[CATEGORIES.length - 1]);
+      max:parseInt(r.max_picks, 10) || 3, opens:r.opens, closes:r.closes, locked:r.locked === 'TRUE'}), CATEGORIES[CATEGORIES.length - 1]);
     if (r.category_description && !c.blurb) c.blurb = r.category_description;
     if (r.nominee) c.nominees.push({id:r.nominee_id || slug(r.nominee), name:r.nominee, sub:r.subtitle, image:safeUrl(r.image), q:r.image_search, link:safeUrl(r.link)});
   }
@@ -324,6 +335,9 @@ function render(){
   $('#soonTitle').textContent = closed ? 'Voting is closed' : 'Nominees coming soon';
   $('#soonText').textContent = closed ? (c.opens && new Date() < new Date(c.opens) ? `Voting for this award opens ${new Date(c.opens).toLocaleString()}.` : 'Voting for this award has closed. Thanks to everyone who voted!')
     : 'The nominees for this award haven\'t been announced yet. Check back soon, or vote in another category.';
+  // Suggestions are taken until a category's nominees are locked for voting.
+  $('#suggest').hidden = SETTINGS.suggestions_open !== 'TRUE' || c.locked;
+  $('#sugCat').textContent = c.title;
   $('#board').hidden = !tier; $('#poolWrap').classList.toggle('picking', !tier);
   $('#poolTitle').textContent = c.nominees.some(n => n.link) ? 'Nominees — tap ▶ to watch' : 'Nominees';
   $('#modeBadge').hidden = live;
@@ -444,6 +458,19 @@ $('#submitBtn').onclick = async () => {
   finally { btn.disabled = false; btn.textContent = 'Submit ballot'; }
 };
 
+$('#suggest').onsubmit = async e => {
+  e.preventDefault();
+  const name = $('#sugName').value.trim(), nominee = $('#sugNominee').value.trim();
+  if (!name || !nominee) return;
+  if (!live){ toast('Demo mode: suggestions are only saved once the Google Sheet is connected.'); return; }
+  try {
+    const r = await api({action:'suggest', name, category:cat().id, nominee, note:$('#sugNote').value.trim()});
+    if (!r.ok) throw new Error(r.error || 'Could not send');
+    $('#sugNominee').value = $('#sugNote').value = '';
+    toast('Thanks! The committee will review your suggestion.');
+  } catch (err){ toast(err.message); }
+};
+
 /* ===== Share image ===== */
 function drawShare(name){
   const cv = $('#shareCanvas'), x = cv.getContext('2d'), W = 1080, H = 1080, d = draft(), c = cat();
@@ -470,7 +497,7 @@ function drawShare(name){
       x.fillText(c.method === 'rank' ? String(i + 1) : '★', 105, y + (rowH - 12) / 2 + 14); x.textAlign = 'left';
       x.fillStyle = '#f5f1e8'; x.font = `700 32px ${sans}`; x.fillText(n.name, 180, y + (rowH - 12) / 2 + 11, W - 280);
     });
-    x.textAlign = 'center'; x.fillStyle = 'rgba(245,241,232,.55)'; x.font = `600 20px ${sans}`; x.fillText('Cast your vote · benburnsred.github.io/anivote/awards/vote', W / 2, H - 46); x.textAlign = 'left';
+    x.textAlign = 'center'; x.fillStyle = 'rgba(245,241,232,.55)'; x.font = `600 20px ${sans}`; x.fillText('Cast your vote · ' + (location.host + location.pathname).replace(/index\.html$/, '').replace(/\/$/, ''), W / 2, H - 46); x.textAlign = 'left';
     return;
   }
   const top = 222, rowH = (H - top - 104) / TIERS.length;
@@ -489,9 +516,9 @@ function drawShare(name){
     });
     if (line) x.fillText(line, 205, ly);
   });
-  x.textAlign = 'center'; x.fillStyle = 'rgba(245,241,232,.55)'; x.font = `600 20px ${sans}`; x.fillText('Cast your vote · benburnsred.github.io/anivote/awards/vote', W / 2, H - 46); x.textAlign = 'left';
+  x.textAlign = 'center'; x.fillStyle = 'rgba(245,241,232,.55)'; x.font = `600 20px ${sans}`; x.fillText('Cast your vote · ' + (location.host + location.pathname).replace(/index\.html$/, '').replace(/\/$/, ''), W / 2, H - 46); x.textAlign = 'left';
 }
-$('#saveImg').onclick = () => { const a = document.createElement('a'); a.download = `anivote-${cat().id}.png`; a.href = $('#shareCanvas').toDataURL('image/png'); a.click(); };
+$('#saveImg').onclick = () => { const a = document.createElement('a'); a.download = `axa-awards-${cat().id}.png`; a.href = $('#shareCanvas').toDataURL('image/png'); a.click(); };
 // Next category that has nominees and hasn't been voted in yet.
 $('#nextCat').onclick = () => {
   for (let k = 1; k <= CATEGORIES.length; k++){ const i = (catIdx + k) % CATEGORIES.length; if (CATEGORIES[i].nominees.length && !isClosed(CATEGORIES[i]) && !submitted[CATEGORIES[i].id]){ catIdx = i; break; } }
@@ -597,7 +624,7 @@ async function loadCovers(){
 $('#codeField').hidden = !USE_VOTER_CODES;
 $('.tabs').hidden = $('#seeResults').hidden = !SHOW_RESULTS_TAB;
 const me = LS.get('aw.voter', null);
-if (me){ $('#voterName').value = me.name || ''; $('#voterCode').value = me.code || ''; }
+if (me){ $('#sugName').value = me.name || ''; $('#voterName').value = me.name || ''; $('#voterCode').value = me.code || ''; }
 loadData().then(() => {
   if (!CATEGORIES.length) throw new Error('No categories found');
   // Start on the first category open for voting, else the first with nominees.

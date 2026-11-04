@@ -10,11 +10,16 @@
  *
  * Tabs (created by setup()):
  *   Settings   — key | value                 (title, date, vote_open, reveal_winners, …)
- *   Categories — id | name | description | type | method | max_picks | opens | closes | order
+ *   Categories — id | name | description | type | method | max_picks | opens | closes | order | locked
+ *                locked: TRUE once published with nominees — nominees and voting method can't change until unlocked
  *                type: vote (public ballot) or special (committee picks the winner, not on the ballot)
  *                method: tier, single, multi or rank (see METHODS)
  *   Nominees   — id | category_id | name | subtitle | image | image_search | link | winner
- *   Votes      — Timestamp | Voter | Code | Category | Nominee | Value | Points
+ *   Votes      — Timestamp | Voter | Code | Category | Nominee | Value | Points. Lives in this spreadsheet, or in a
+ *                separate one (votes_sheet_id setting). VotesMapping maps each field to a column header there, so an
+ *                existing sheet with its own headers can be used as the datasource.
+ *   VotesMapping — field | column   (timestamp, voter, code, category, nominee, value, points)
+ *   Suggestions — id | Timestamp | Name | Category | Nominee | Note | Status   (public nominee suggestions)
  *   Codes      — optional voter codes: Code | Category | Used By | Used At
  *   Committee  — email | name
  *   Log        — Timestamp | Email | Action | Details
@@ -43,25 +48,28 @@ const SHOW_RESULTS = false;
 
 const TABS = {
   Settings: ['key', 'value'],
-  Categories: ['id', 'name', 'description', 'type', 'method', 'max_picks', 'opens', 'closes', 'order'],
+  Categories: ['id', 'name', 'description', 'type', 'method', 'max_picks', 'opens', 'closes', 'order', 'locked'],
   Nominees: ['id', 'category_id', 'name', 'subtitle', 'image', 'image_search', 'link', 'winner'],
   Votes: ['Timestamp', 'Voter', 'Code', 'Category', 'Nominee', 'Value', 'Points'],
   Codes: ['Code', 'Category', 'Used By', 'Used At'],
+  VotesMapping: ['field', 'column'],
+  Suggestions: ['id', 'Timestamp', 'Name', 'Category', 'Nominee', 'Note', 'Status'],
   Committee: ['email', 'name'],
   Log: ['Timestamp', 'Email', 'Action', 'Details']
 };
 const SITE_HEADERS = ['category', 'category_description', 'category_color', 'nominee', 'subtitle', 'image', 'image_search',
   'link', 'winner', 'result', 'image_style', 'category_image', 'category_id', 'nominee_id', 'category_type', 'method',
-  'max_picks', 'opens', 'closes'];
+  'max_picks', 'opens', 'closes', 'locked'];
+const VOTE_FIELDS = ['timestamp', 'voter', 'code', 'category', 'nominee', 'value', 'points'];
 const DEFAULT_SETTINGS = [['title', 'Anime X Angas Awards 2026'], ['tagline', ''], ['date', ''], ['venue', ''],
   ['stream_url', ''], ['vote_url', '../vote/'], ['vote_open', 'TRUE'], ['reveal_winners', 'FALSE'], ['show_results', 'FALSE'],
-  ['trophy_image', '../img/trophy.webp'], ['facebook_url', 'https://www.facebook.com/AnimexAngas'],
+  ['trophy_image', '../img/trophy.webp'], ['suggestions_open', 'TRUE'], ['votes_sheet_id', ''], ['votes_tab', 'Votes'], ['facebook_url', 'https://www.facebook.com/AnimexAngas'],
   ['youtube_url', 'https://www.youtube.com/@AnimexAngas'], ['discord_url', 'https://discord.gg/AnimexAngas']];
 
 function setup() {
   const ss = SpreadsheetApp.getActive();
   Object.keys(TABS).forEach(name => {
-    if (!ss.getSheetByName(name)) {
+    if (name !== 'Votes' && !ss.getSheetByName(name)) {
       const sh = ss.insertSheet(name);
       sh.appendRow(TABS[name]);
       sh.setFrozenRows(1);
@@ -69,6 +77,8 @@ function setup() {
   });
   const settings = ss.getSheetByName('Settings');
   if (settings.getLastRow() < 2) settings.getRange(2, 1, DEFAULT_SETTINGS.length, 2).setValues(DEFAULT_SETTINGS);
+  const mapping = ss.getSheetByName('VotesMapping');
+  if (mapping.getLastRow() < 2) mapping.getRange(2, 1, VOTE_FIELDS.length, 2).setValues(VOTE_FIELDS.map((f, i) => [f, TABS.Votes[i]]));
   const committee = ss.getSheetByName('Committee');
   const me = Session.getEffectiveUser().getEmail();
   if (committee.getLastRow() < 2 && me) committee.appendRow([me, 'Owner']);
@@ -129,6 +139,66 @@ function json(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
 }
 
+/* ===== Votes datasource ===== */
+
+// The votes tab, and which column header holds each field.
+function votesSource() {
+  const s = settingsMap();
+  const ss = s.votes_sheet_id ? SpreadsheetApp.openById(s.votes_sheet_id.trim()) : SpreadsheetApp.getActive();
+  const tab = (s.votes_tab || 'Votes').trim();
+  let sh = ss.getSheetByName(tab);
+  if (!sh) {
+    sh = ss.insertSheet(tab);
+    sh.appendRow(TABS.Votes);
+    sh.setFrozenRows(1);
+  }
+  const map = {};
+  VOTE_FIELDS.forEach((f, i) => map[f] = TABS.Votes[i]);
+  readTable('VotesMapping').forEach(r => { if (r.field && r.column) map[r.field.trim().toLowerCase()] = r.column.trim(); });
+  const head = sh.getLastColumn() ? sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(h => String(h).trim()) : [];
+  return {ss: ss, sheet: sh, map: map, head: head};
+}
+
+// Every vote row as {timestamp, voter, code, category, nominee, value, points}. Category and nominee may be stored as
+// ids or names; names are resolved to ids. Without a points column, a tier letter (S…D) scores its tier points
+// and anything else counts as 1 point.
+function readVotes() {
+  const src = votesSource();
+  const idx = {};
+  VOTE_FIELDS.forEach(f => idx[f] = src.head.indexOf(src.map[f]));
+  const cats = readTable('Categories'), noms = readTable('Nominees');
+  const values = src.sheet.getDataRange().getValues().slice(1);
+  return values.filter(r => r.some(v => v !== '')).map(r => {
+    const o = {};
+    VOTE_FIELDS.forEach(f => {
+      const v = idx[f] >= 0 ? r[idx[f]] : '';
+      o[f] = v instanceof Date ? v.toISOString() : String(v).replace(/^'/, '').trim();
+    });
+    const c = cats.find(x => x.id === o.category || x.name.toLowerCase() === o.category.toLowerCase());
+    if (c) o.category = c.id;
+    const n = noms.find(x => x.category_id === o.category && (x.id === o.nominee || x.name.toLowerCase() === o.nominee.toLowerCase()));
+    if (n) o.nominee = n.id;
+    if (o.points === '') o.points = String(TIERS[o.value.toUpperCase()] ? TIERS[o.value.toUpperCase()].points : 1);
+    return o;
+  });
+}
+
+// A sheet with its own (re-mapped) category/nominee columns gets readable names; the built-in layout stores ids.
+function appendVotes(list) {
+  const src = votesSource();
+  if (src.map.category !== 'Category' || src.map.nominee !== 'Nominee') {
+    const cats = readTable('Categories'), noms = readTable('Nominees');
+    list = list.map(o => Object.assign({}, o, {
+      category: cell((cats.find(c => c.id === o.category) || {}).name || o.category),
+      nominee: cell((noms.find(n => n.id === o.nominee) || {}).name || o.nominee)}));
+  }
+  const rows = list.map(o => src.head.map(h => {
+    const f = VOTE_FIELDS.find(k => src.map[k] === h);
+    return f ? o[f] : '';
+  }));
+  src.sheet.getRange(src.sheet.getLastRow() + 1, 1, rows.length, src.head.length).setValues(rows);
+}
+
 /* ===== Web app ===== */
 
 function doGet(e) {
@@ -151,9 +221,9 @@ function doPost(e) {
   } catch (err) {
     return json({ok: false, error: 'Invalid request'});
   }
-  if (!body || body.action !== 'vote') return json({ok: false, error: 'Invalid request'});
+  if (!body || (body.action !== 'vote' && body.action !== 'suggest')) return json({ok: false, error: 'Invalid request'});
   try {
-    return json(withLock(() => recordVote(body)));
+    return json(withLock(() => body.action === 'vote' ? recordVote(body) : recordSuggestion(body)));
   } catch (err) {
     console.error(err);
     return json({ok: false, error: err.message === 'Busy — please try again' ? err.message : 'Something went wrong — please try again'});
@@ -232,28 +302,39 @@ function recordVote(b) {
     sheet('Codes').appendRow([cell(code), categoryId, cell(voter), new Date()]);
   } else {
     const key = voter.toLowerCase();
-    const votes = sheet('Votes').getDataRange().getValues().slice(1);
-    if (votes.some(r => String(r[1]).replace(/^'/, '').toLowerCase() === key && r[3] === categoryId)) {
+    if (readVotes().some(v => v.voter.toLowerCase() === key && v.category === categoryId)) {
       return {ok: false, error: 'You already voted in this category'};
     }
   }
   const now = new Date();
-  const rows = scored.map(s => [now, cell(voter), cell(code), categoryId, s.nominee, s.value, s.points]);
-  const sh = sheet('Votes');
-  sh.getRange(sh.getLastRow() + 1, 1, rows.length, rows[0].length).setValues(rows);
+  appendVotes(scored.map(s => ({timestamp: now, voter: cell(voter), code: cell(code), category: categoryId,
+    nominee: s.nominee, value: s.value, points: s.points})));
+  return {ok: true};
+}
+
+function recordSuggestion(b) {
+  if (settingsMap().suggestions_open !== 'TRUE') return {ok: false, error: 'Suggestions are closed'};
+  const name = String(b.name || '').replace(/\s+/g, ' ').trim().slice(0, 40);
+  const nominee = String(b.nominee || '').replace(/\s+/g, ' ').trim().slice(0, 100);
+  const note = String(b.note || '').trim().slice(0, 300);
+  const c = readTable('Categories').find(x => x.id === String(b.category || ''));
+  if (!name || !nominee || !c) return {ok: false, error: 'Please fill in your name, a category and a nominee'};
+  if (c.locked === 'TRUE') return {ok: false, error: 'Nominees for this award are final'};
+  const dup = readTable('Suggestions').some(r => r.Category === c.id && r.Nominee.toLowerCase() === nominee.toLowerCase() && r.Status !== 'rejected');
+  if (!dup) sheet('Suggestions').appendRow([newId(), new Date(), cell(name), c.id, cell(nominee), cell(note), 'pending']);
   return {ok: true};
 }
 
 // {categoryId: {nomineeId: {points, voters, top}}} — top = first-place picks (S tier, rank 1 or a pick), for tie-breaks.
 function tally(categoryId) {
   const out = {};
-  readTable('Votes').forEach(v => {
-    if (categoryId && v.Category !== categoryId) return;
-    const c = out[v.Category] = out[v.Category] || {};
-    const n = c[v.Nominee] = c[v.Nominee] || {points: 0, voters: 0, top: 0};
-    n.points += Number(v.Points) || 0;
+  readVotes().forEach(v => {
+    if (categoryId && v.category !== categoryId) return;
+    const c = out[v.category] = out[v.category] || {};
+    const n = c[v.nominee] = c[v.nominee] || {points: 0, voters: 0, top: 0};
+    n.points += Number(v.points) || 0;
     n.voters++;
-    if (v.Value === 'S' || v.Value === '1' || v.Value === 'pick') n.top++;
+    if (v.value === 'S' || v.value === '1' || v.value === 'pick') n.top++;
   });
   return categoryId ? (out[categoryId] || {}) : out;
 }
@@ -277,10 +358,18 @@ function adminState() {
   const email = requireCommittee();
   const categories = readTable('Categories').sort((a, b) => Number(a.order) - Number(b.order));
   const counts = {};
-  readTable('Votes').forEach(v => {
-    const key = v.Category + '|' + v.Voter.toLowerCase();
-    counts[v.Category] = counts[v.Category] || {};
-    counts[v.Category][key] = true;
+  let votes = [], votesInfo;
+  try {
+    const src = votesSource();
+    votes = readVotes();
+    votesInfo = {url: src.ss.getUrl(), name: src.ss.getName(), tab: src.sheet.getName(), rows: votes.length,
+      missing: VOTE_FIELDS.filter(f => src.head.indexOf(src.map[f]) < 0)};
+  } catch (err) {
+    votesInfo = {error: 'Can\'t open the votes sheet: ' + err.message};
+  }
+  votes.forEach(v => {
+    counts[v.category] = counts[v.category] || {};
+    counts[v.category][v.voter.toLowerCase()] = true;
   });
   return {
     email: email,
@@ -288,7 +377,9 @@ function adminState() {
     settings: settingsMap(),
     categories: categories.map(c => Object.assign(c, {ballots: Object.keys(counts[c.id] || {}).length})),
     nominees: readTable('Nominees'),
-    results: tally(),
+    results: votesInfo.error ? {} : tally(),
+    votesInfo: votesInfo,
+    suggestions: readTable('Suggestions').filter(r => r.Status === 'pending'),
     log: readTable('Log').slice(-30).reverse()
   };
 }
@@ -309,6 +400,9 @@ function adminSaveCategory(c) {
       closes: String(c.closes || '')
     };
     let row = rows.find(r => r.id === c.id);
+    if (row && row.locked === 'TRUE' && (clean.method !== row.method || clean.max_picks !== row.max_picks || clean.type !== row.type)) {
+      throw new Error('This category is locked: unlock it to change its type or voting method');
+    }
     if (row) Object.assign(row, clean);
     else rows.push(row = Object.assign({id: newId(), order: String(rows.length + 1)}, clean));
     writeTable('Categories', TABS.Categories, rows);
@@ -323,7 +417,7 @@ function adminDeleteCategory(id) {
     const rows = readTable('Categories');
     const c = rows.find(r => r.id === id);
     if (!c) throw new Error('Category not found');
-    if (readTable('Votes').some(v => v.Category === id)) throw new Error('This category already has votes; it can\'t be deleted');
+    if (readVotes().some(v => v.category === id)) throw new Error('This category already has votes; it can\'t be deleted');
     writeTable('Categories', TABS.Categories, rows.filter(r => r.id !== id).map((r, i) => Object.assign(r, {order: String(i + 1)})));
     writeTable('Nominees', TABS.Nominees, readTable('Nominees').filter(n => n.category_id !== id));
     log(email, 'delete category', c.name);
@@ -350,7 +444,9 @@ function adminSaveNominee(n) {
     const rows = readTable('Nominees');
     const name = String(n.name || '').trim();
     if (!name) throw new Error('Nominee needs a name');
-    if (!readTable('Categories').some(c => c.id === n.category_id)) throw new Error('Category not found');
+    const cat = readTable('Categories').find(c => c.id === n.category_id);
+    if (!cat) throw new Error('Category not found');
+    if (cat.locked === 'TRUE') throw new Error('This category is locked: unlock it to change nominees');
     const clean = {name: name, subtitle: String(n.subtitle || '').trim(), image: String(n.image || '').trim(),
       image_search: String(n.image_search || '').trim(), link: String(n.link || '').trim()};
     let row = rows.find(r => r.id === n.id);
@@ -368,7 +464,8 @@ function adminDeleteNominee(id) {
     const rows = readTable('Nominees');
     const n = rows.find(r => r.id === id);
     if (!n) throw new Error('Nominee not found');
-    if (readTable('Votes').some(v => v.Nominee === id)) throw new Error('This nominee already has votes; it can\'t be deleted');
+    if (readTable('Categories').some(c => c.id === n.category_id && c.locked === 'TRUE')) throw new Error('This category is locked: unlock it to change nominees');
+    if (readVotes().some(v => v.nominee === id)) throw new Error('This nominee already has votes; it can\'t be deleted');
     writeTable('Nominees', TABS.Nominees, rows.filter(r => r.id !== id));
     log(email, 'delete nominee', n.name);
     return adminState();
@@ -413,8 +510,58 @@ function adminPublish() {
       list.forEach(n => rows.push(Object.assign({}, base, {nominee: n.name, subtitle: n.subtitle, image: n.image,
         image_search: n.image_search, link: n.link, winner: n.winner, nominee_id: n.id})));
     });
+    // Lock public-vote categories that now have published nominees, so the ballot can't change mid-vote.
+    const locked = [];
+    cats.forEach(c => {
+      if (c.type !== 'special' && c.locked !== 'TRUE' && noms.some(n => n.category_id === c.id)) { c.locked = 'TRUE'; locked.push(c.name); }
+    });
+    if (locked.length) writeTable('Categories', TABS.Categories, cats);
+    rows.forEach(r => { const c = cats.find(x => x.id === r.category_id); r.locked = c ? c.locked : ''; });
     writeTable('Site', SITE_HEADERS, rows);
-    log(email, 'publish', rows.length + ' rows');
+    log(email, 'publish', rows.length + ' rows' + (locked.length ? '; locked ' + locked.join(', ') : ''));
+    return adminState();
+  });
+}
+
+function adminUnlockCategory(id) {
+  const email = requireCommittee();
+  return withLock(() => {
+    const rows = readTable('Categories');
+    const c = rows.find(r => r.id === id);
+    if (!c) throw new Error('Category not found');
+    c.locked = '';
+    writeTable('Categories', TABS.Categories, rows);
+    log(email, 'unlock category', c.name);
+    return adminState();
+  });
+}
+
+// action: 'approve' adds the suggestion as a nominee in categoryId (defaults to the suggested one); 'reject' dismisses it.
+function adminResolveSuggestion(id, action, categoryId) {
+  const email = requireCommittee();
+  return withLock(() => {
+    const rows = readTable('Suggestions');
+    const s = rows.find(r => r.id === id);
+    if (!s) throw new Error('Suggestion not found');
+    if (action === 'approve') {
+      const target = categoryId || s.Category;
+      const cat = readTable('Categories').find(c => c.id === target);
+      if (!cat) throw new Error('Category not found');
+      if (cat.locked === 'TRUE') throw new Error('That category is locked: unlock it to add nominees');
+      const noms = readTable('Nominees');
+      if (!noms.some(n => n.category_id === target && n.name.toLowerCase() === s.Nominee.toLowerCase())) {
+        noms.push({id: newId(), category_id: target, name: s.Nominee, subtitle: '', image: '', image_search: '', link: '', winner: ''});
+        writeTable('Nominees', TABS.Nominees, noms);
+      }
+    }
+    // Approving or rejecting one suggestion settles every pending duplicate of it.
+    rows.forEach(r => {
+      if (r.Status === 'pending' && r.Category === s.Category && r.Nominee.toLowerCase() === s.Nominee.toLowerCase()) {
+        r.Status = action === 'approve' ? 'approved' : 'rejected';
+      }
+    });
+    writeTable('Suggestions', TABS.Suggestions, rows);
+    log(email, action + ' suggestion', s.Nominee);
     return adminState();
   });
 }

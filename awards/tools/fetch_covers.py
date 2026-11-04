@@ -20,7 +20,7 @@ import urllib.request
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # awards/
 COVERS = os.path.join(ROOT, 'img', 'covers')
-UA = {'User-Agent': 'anivote-awards-cover-fetcher'}
+UA = {'User-Agent': 'axa-awards-cover-fetcher'}
 
 
 def slug(s):

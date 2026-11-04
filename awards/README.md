@@ -134,13 +134,16 @@ The script checks every ballot, so a tampered page can't change the scoring or i
 
 `Codes` is optional. By default the page asks for a name only (`USE_VOTER_CODES = false` in `vote/index.html`). To use codes, set `USE_VOTER_CODES = true` and put one code per row in column A, leaving the other columns blank. Each code can then vote once per category.
 
-## Adding categories and nominees
+## Categories and nominees
 
-Add entries to `CATEGORIES` in `vote/index.html`, and add the same nominee ids to `NOMINEES` in `Code.gs` (redeploy afterwards):
-- Each nominee needs a unique `id`.
-- `q` is the anime title used to look up cover art (AniList, then MyAnimeList).
+The ballot has no list of its own. It reads the current edition's nominees table (`NOMINEES_CSV`, now `../2026/data/nominees.csv`), so adding nominees on the awards side opens that category for voting:
+- Every category appears as a tab. Ones without nominees show "Nominees coming soon".
+- A nominee's `link` adds a ▶ button on its card (the 2026 openings link to a YouTube search).
+- Category and nominee ids are made from their names, so renaming one after people have voted starts a fresh tally for it.
 
-When there's more than one category, category tabs appear automatically.
+The Sheets script checks ballots against the same file (`NOMINEES_URL` in `Code.gs`, re-read every 10 minutes), so there's nothing to keep in sync. When you move to a new edition, point both at the new year's file.
+
+The Results tab is hidden (`SHOW_RESULTS_TAB = false`) until it's decided how results are shown at the ceremony.
 
 ## Sample nominees
 

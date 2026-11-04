@@ -25,11 +25,9 @@ const TIERS = {
   D: {points: 1, cap: 0}
 };
 
-// Must match CATEGORIES in awards/vote/index.html. Ballots naming anything else are rejected.
-const NOMINEES = {
-  'anime-opening': ['iris-out', 'lulu', 'aizo', 'stella', 'hikari-no-uta', 'recollect', 'monster',
-    'kasuka-na-hana', 'provant', 'sweet-magic']
-};
+// The same nominees file the ballot reads (NOMINEES_CSV in awards/vote/index.html). Ballots naming any
+// category or nominee not in it are rejected, so updating that file is all it takes to open a new category.
+const NOMINEES_URL = 'https://benburnsred.github.io/anivote/awards/2026/data/nominees.csv';
 
 // true = anyone with the page link can fetch the point totals (never names). Keep false until awards night.
 const SHOW_RESULTS = false;
@@ -50,6 +48,35 @@ function setup() {
     ss.insertSheet(RESULTS).getRange('A1').setFormula(
       '=QUERY(' + VOTES + '!A:G,"select D, E, sum(G), count(G) where D is not null group by D, E ' +
       'order by D, sum(G) desc label D \'Category\', E \'Nominee\', sum(G) \'Points\', count(G) \'Voters\'",1)');
+  }
+}
+
+// Must match slug() in awards/vote/index.html.
+function slug(s) {
+  return String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+
+// {categoryId: {nomineeId: nomineeName}}, cached for 10 minutes; the last good copy is kept in case the fetch fails.
+function nominees() {
+  const cache = CacheService.getScriptCache(), props = PropertiesService.getScriptProperties();
+  const hit = cache.get('nominees');
+  if (hit) return JSON.parse(hit);
+  try {
+    const rows = Utilities.parseCsv(UrlFetchApp.fetch(NOMINEES_URL).getContentText());
+    const head = rows.shift().map(h => h.trim().toLowerCase());
+    const ci = head.indexOf('category'), ni = head.indexOf('nominee');
+    const out = {};
+    rows.forEach(r => {
+      if (!r[ci] || !r[ni]) return;
+      (out[slug(r[ci])] = out[slug(r[ci])] || {})[slug(r[ni])] = r[ni].trim();
+    });
+    const text = JSON.stringify(out);
+    cache.put('nominees', text, 600);
+    props.setProperty('nominees', text);
+    return out;
+  } catch (err) {
+    console.error(err);
+    return JSON.parse(props.getProperty('nominees') || '{}');
   }
 }
 
@@ -91,17 +118,17 @@ function recordVote(b) {
   const code = String(b.code || '').trim().toUpperCase().slice(0, 20);
   const category = String(b.category || '');
   const placements = Array.isArray(b.placements) ? b.placements : [];
-  const allowed = NOMINEES[category];
+  const allowed = nominees()[category];
   if (!voter) return {ok: false, error: 'Please enter your name'};
   if (!allowed) return {ok: false, error: 'Invalid ballot'};
-  if (!placements.length || placements.length > allowed.length) return {ok: false, error: 'Invalid ballot'};
+  if (!placements.length || placements.length > Object.keys(allowed).length) return {ok: false, error: 'Invalid ballot'};
 
   // Validate nominees, tiers, caps and duplicates.
   const counts = {};
   const seen = {};
   for (const p of placements) {
     const t = TIERS[p && p.tier];
-    if (!t || allowed.indexOf(p.nominee) < 0 || seen[p.nominee]) return {ok: false, error: 'Invalid ballot'};
+    if (!t || !Object.prototype.hasOwnProperty.call(allowed, p.nominee) || seen[p.nominee]) return {ok: false, error: 'Invalid ballot'};
     seen[p.nominee] = true;
     counts[p.tier] = (counts[p.tier] || 0) + 1;
     if (t.cap && counts[p.tier] > t.cap) return {ok: false, error: p.tier + ' tier allows only ' + t.cap};
@@ -125,7 +152,8 @@ function recordVote(b) {
   }
 
   const now = new Date();
-  const rows = placements.map(p => [now, cell(voter), cell(code), category, p.nominee, p.tier, TIERS[p.tier].points]);
+  // Store the nominee's display name so the Sheet is readable.
+  const rows = placements.map(p => [now, cell(voter), cell(code), category, cell(allowed[p.nominee]), p.tier, TIERS[p.tier].points]);
   const sheet = ss.getSheetByName(VOTES);
   sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, rows[0].length).setValues(rows);
   return {ok: true};

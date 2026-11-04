@@ -44,6 +44,8 @@ h1{font:900 clamp(28px,5vw,52px)/1.05 var(--serif);text-transform:uppercase;lett
 .cats button{border:1px solid var(--line2);background:transparent;padding:9px 14px;cursor:pointer;font:700 12px/1 var(--sans);letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
 .cats button.on{border-color:rgba(233,196,106,.6);color:var(--ink)}
 .cats button .done{color:var(--gold);margin-left:6px}
+.cats button.soon{opacity:.45}
+.soon{text-align:center;padding:48px 20px}.soon h2{font:900 clamp(20px,3vw,28px)/1.1 var(--serif);text-transform:uppercase;letter-spacing:.03em;margin:0 0 10px}.soon p{color:var(--muted);margin:0 auto;max-width:460px}
 .voter{display:flex;gap:12px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);padding:16px;margin-bottom:18px}
 .voter label{display:flex;flex-direction:column;gap:8px;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);font-weight:700;flex:1 1 200px}
 .voter input{background:rgba(0,0,0,.35);border:1px solid var(--line2);padding:12px 14px;outline:none;font-size:15px;letter-spacing:normal;text-transform:none;color:var(--ink);transition:border-color .2s}
@@ -115,7 +117,7 @@ footer a{color:var(--muted)}
 
   <section class="hero">
     <div class="eyebrow" id="eyebrow">Official ballot · 2026</div>
-    <h1><span class="metal" id="catTitle">Anime Opening of the Year</span></h1>
+    <h1><span class="metal" id="catTitle">Loading…</span></h1>
     <p id="catBlurb"></p>
     <span class="mode" id="modeBadge"></span>
   </section>
@@ -123,19 +125,22 @@ footer a{color:var(--muted)}
   <div class="cats" id="cats"></div>
 
   <main id="voteView">
+    <div class="panel soon" id="soon" hidden><h2>Nominees coming soon</h2><p>The nominees for this award haven't been announced yet. Check back soon, or vote in another category.</p></div>
+    <div id="ballot">
     <div class="voter">
       <label>Your name<input id="voterName" placeholder="e.g. Ben" maxlength="40" autocomplete="nickname"></label>
       <label id="codeField">Voter code<input id="voterCode" placeholder="e.g. AWD-7Q2K" maxlength="20" autocomplete="off"></label>
     </div>
     <p class="hint" id="hint"></p>
     <div class="board" id="board"></div>
-    <div class="pool" id="poolWrap"><h3>Nominees — tap ▶ to listen</h3><div class="slots" id="pool" data-tier=""></div></div>
+    <div class="pool" id="poolWrap"><h3 id="poolTitle">Nominees</h3><div class="slots" id="pool" data-tier=""></div></div>
     <div class="actions">
       <span class="score" id="progress"></span>
       <div style="display:flex;gap:8px">
         <button class="btn" id="resetBtn">Reset</button>
         <button class="btn primary" id="submitBtn">Submit ballot</button>
       </div>
+    </div>
     </div>
   </main>
 
@@ -166,7 +171,7 @@ footer a{color:var(--muted)}
     </div>
   </main>
 
-  <footer>Song data: Billboard JAPAN Hot Animation (H1 2026) and Anime Corner / Anime!Anime! seasonal polls. Cover art via <a href="https://anilist.co" target="_blank" rel="noopener">AniList</a> and <a href="https://jikan.moe" target="_blank" rel="noopener">Jikan</a>.</footer>
+  <footer>Cover art via <a href="https://anilist.co" target="_blank" rel="noopener">AniList</a> and <a href="https://jikan.moe" target="_blank" rel="noopener">Jikan</a>.</footer>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -175,12 +180,17 @@ footer a{color:var(--muted)}
 // Paste your Apps Script web app URL here (see awards/README.md). Empty = demo mode (votes saved in this browser only).
 const APPS_SCRIPT_URL = '';
 
+// The ballot reads its categories and nominees from the current awards edition, so both pages always match.
+// Categories without nominees show as "coming soon". Use the same URLs as that edition's page (CSV files or published Sheet tabs).
+const NOMINEES_CSV = '../2026/data/nominees.csv';
+const SETTINGS_CSV = '../2026/data/settings.csv';
+
 // true = voters also enter a one-time code from the Codes tab. false = name only (one ballot per name per category).
 const USE_VOTER_CODES = false;
 
-// Show the Results tab to voters. Defaults to on in demo mode and off once connected, so voters only see the ballot.
+// Show the Results tab to voters. Off until it's decided how results are shown at the ceremony.
 // Live results also need SHOW_RESULTS = true in Code.gs.
-const SHOW_RESULTS_TAB = !APPS_SCRIPT_URL;
+const SHOW_RESULTS_TAB = false;
 
 // Points per tier and the max number of nominees allowed in each tier (0 = no limit).
 // Keep in sync with TIERS in apps-script/Code.gs, which re-checks every ballot.
@@ -191,28 +201,53 @@ const TIERS = [
   {id:'C', points:2, cap:0, color:'var(--C)'},
   {id:'D', points:1, cap:0, color:'var(--D)'}
 ];
+const RULES = 'Drag or tap each nominee into a tier: S = 5 pts, A = 4, B = 3, C = 2, D = 1. Leave any you don\'t know in the pool — they score 0.';
 
-// Sample nominees: popular 2026 anime songs (chart and fan-poll picks). `q` is the Jikan search used for cover art.
-// Keep ids in sync with NOMINEES in apps-script/Code.gs, which rejects anything else.
-const CATEGORIES = [
-  {
-    id:'anime-opening',
-    title:'Anime Opening of the Year',
-    blurb:'Drag (or tap) each opening into a tier. S = 5 pts, A = 4, B = 3, C = 2, D = 1. Leave any you haven\'t heard in the pool — they score 0.',
-    nominees:[
-      {id:'iris-out', song:'IRIS OUT', artist:'Kenshi Yonezu', anime:'Chainsaw Man – The Movie: Reze Arc', q:'Chainsaw Man Movie: Reze-hen'},
-      {id:'lulu', song:'lulu.', artist:'Mrs. GREEN APPLE', anime:'Frieren Season 2', q:'Sousou no Frieren 2nd Season'},
-      {id:'aizo', song:'AIZO', artist:'King Gnu', anime:'Jujutsu Kaisen Season 3', q:'Jujutsu Kaisen Shimetsu Kaiyuu'},
-      {id:'stella', song:'Stella', artist:'SEKAI NO OWARI', anime:'Jaadugar: A Witch in Mongolia', q:'Tenmaku no Jaadugar'},
-      {id:'hikari-no-uta', song:'Hikari no Uta', artist:'Yuiko Ohara', anime:'Mushoku Tensei Season 3', q:'Mushoku Tensei III: Isekai Ittara Honki Dasu'},
-      {id:'recollect', song:'Recollect', artist:'Konomi Suzuki feat. Ashnikko', anime:'Re:ZERO Season 4', q:'Re:Zero kara Hajimeru Isekai Seikatsu 4th Season'},
-      {id:'monster', song:'MONSTER', artist:'Eir Aoi', anime:'Classroom of the Elite IV', q:'Youkoso Jitsuryoku Shijou Shugi no Kyoushitsu e 4th Season'},
-      {id:'kasuka-na-hana', song:'Kasuka na Hana', artist:'Tatsuya Kitani feat. BABYMETAL', anime:'Hell\'s Paradise Season 2', q:'Jigokuraku 2nd Season'},
-      {id:'provant', song:'PROVANT', artist:'SawanoHiroyuki[nZk]', anime:'Fate/strange Fake', q:'Fate/strange Fake'},
-      {id:'sweet-magic', song:'Sweet Magic', artist:'F/ACE', anime:'Tamon\'s B-Side', q:'Tamon-kun Ima Docchi!?'}
-    ]
+let CATEGORIES = [], EDITION = 'Anime X Angas Awards';
+
+/* ===== Data ===== */
+// Must match slug() in apps-script/Code.gs: ballots refer to categories and nominees by these ids.
+const slug = s => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+const safeUrl = u => { u = String(u || '').trim(); return /^(https?:\/\/|\.{0,2}\/|[\w-]+\/)/i.test(u) ? u : ''; };
+
+function csvUrl(u){
+  const m = u.match(/docs\.google\.com\/spreadsheets\/d\/([\w-]+)/);
+  if (!m || /output=csv|tqx=out:csv/.test(u)) return u;
+  const gid = (u.match(/[#&?]gid=(\d+)/) || [])[1] || '0';
+  return `https://docs.google.com/spreadsheets/d/${m[1]}/gviz/tq?tqx=out:csv&gid=${gid}`;
+}
+function parseCSV(text){
+  const rows = []; let row = [], f = '', q = false;
+  for (let i = 0; i < text.length; i++){
+    const c = text[i];
+    if (q){ if (c === '"'){ if (text[i + 1] === '"'){ f += '"'; i++; } else q = false; } else f += c; }
+    else if (c === '"') q = true;
+    else if (c === ','){ row.push(f); f = ''; }
+    else if (c === '\n' || c === '\r'){ if (c === '\r' && text[i + 1] === '\n') i++; row.push(f); rows.push(row); row = []; f = ''; }
+    else f += c;
   }
-];
+  if (f || row.length){ row.push(f); rows.push(row); }
+  const head = (rows.shift() || []).map(h => h.trim().toLowerCase().replace(/\s+/g, '_'));
+  return rows.filter(r => r.some(v => v.trim())).map(r => Object.fromEntries(head.map((h, i) => [h, (r[i] || '').trim()])));
+}
+async function getCSV(u){
+  const res = await fetch(csvUrl(u) + (u.includes('?') ? '&' : '?') + 't=' + Math.floor(Date.now() / 30000), {cache:'no-store'});
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  return parseCSV(await res.text());
+}
+
+async function loadData(){
+  const [rows, settings] = await Promise.all([getCSV(NOMINEES_CSV), getCSV(SETTINGS_CSV).catch(() => [])]);
+  EDITION = (settings.find(r => r.key === 'title') || {}).value || EDITION;
+  const byId = {};
+  for (const r of rows){
+    if (!r.category) continue;
+    const id = slug(r.category);
+    const c = byId[id] ||= (CATEGORIES.push({id, title:r.category, blurb:'', nominees:[]}), CATEGORIES[CATEGORIES.length - 1]);
+    if (r.category_description && !c.blurb) c.blurb = r.category_description;
+    if (r.nominee) c.nominees.push({id:slug(r.nominee), name:r.nominee, sub:r.subtitle, image:safeUrl(r.image), q:r.image_search, link:safeUrl(r.link)});
+  }
+}
 
 /* ===== State ===== */
 const LS = {
@@ -223,7 +258,7 @@ const live = !!APPS_SCRIPT_URL;
 let catIdx = 0;
 let placements = LS.get('aw.drafts', {});   // {catId: {nomineeId: tierId}}
 let submitted = LS.get('aw.submitted', {}); // {catId: true}
-let covers = LS.get('aw.covers2', {});       // {nomineeId: imageUrl}
+let covers = LS.get('aw.covers3', {});       // {imageSearch: imageUrl}
 let selected = null;
 
 const $ = s => document.querySelector(s);
@@ -236,21 +271,26 @@ function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add
 
 /* ===== Rendering ===== */
 function cardHTML(n){
-  const img = covers[n.id] ? `<div class="img" style="background-image:url('${esc(covers[n.id])}')"></div>` : '';
-  const yt = 'https://www.youtube.com/results?search_query=' + encodeURIComponent(`${n.anime} opening ${n.song} ${n.artist}`);
-  return `<div class="card${selected === n.id ? ' sel' : ''}" draggable="true" data-id="${n.id}" title="${esc(n.song)} — ${esc(n.artist)} (${esc(n.anime)})">
-    ${img}<div class="txt"><div class="song">${esc(n.song)}</div><div class="meta">${esc(n.anime)}</div><div class="meta">${esc(n.artist)}</div></div>
-    <a class="play" href="${yt}" target="_blank" rel="noopener" title="Listen on YouTube">▶</a></div>`;
+  const u = n.image || covers[n.q];
+  const img = u ? `<div class="img" style="background-image:url('${esc(u)}')"></div>` : '';
+  const meta = String(n.sub || '').split(' · ').filter(Boolean).slice(0, 2);
+  return `<div class="card${selected === n.id ? ' sel' : ''}" draggable="true" data-id="${n.id}" title="${esc(n.name)}${n.sub ? ' — ' + esc(n.sub) : ''}">
+    ${img}<div class="txt"><div class="song">${esc(n.name)}</div>${meta.map(m => `<div class="meta">${esc(m)}</div>`).join('')}</div>
+    ${n.link ? `<a class="play" href="${esc(n.link)}" target="_blank" rel="noopener" title="Watch / listen">▶</a>` : ''}</div>`;
 }
 
 function render(){
+  if (!CATEGORIES.length) return;
   const c = cat(), d = draft();
   $('#catTitle').textContent = c.title;
-  $('#catBlurb').textContent = c.blurb;
+  $('#catBlurb').textContent = [c.blurb, c.nominees.length ? RULES : ''].filter(Boolean).join(' ');
+  $('#eyebrow').textContent = 'Official ballot · ' + (EDITION.match(/\d{4}/) || [''])[0];
+  $('#soon').hidden = !!c.nominees.length; $('#ballot').hidden = !c.nominees.length;
+  $('#poolTitle').textContent = c.nominees.some(n => n.link) ? 'Nominees — tap ▶ to watch' : 'Nominees';
   $('#modeBadge').hidden = live;
   $('#modeBadge').innerHTML = '<b>●</b> Demo mode — ballots stay in this browser';
   $('#cats').innerHTML = CATEGORIES.length > 1 ? CATEGORIES.map((x, i) =>
-    `<button data-i="${i}" class="${i === catIdx ? 'on' : ''}">${esc(x.title)}${submitted[x.id] ? '<span class="done">✓</span>' : ''}</button>`).join('') : '';
+    `<button data-i="${i}" class="${i === catIdx ? 'on' : ''}${x.nominees.length ? '' : ' soon'}" title="${x.nominees.length ? '' : 'Nominees coming soon'}">${esc(x.title)}${submitted[x.id] ? '<span class="done">✓</span>' : ''}</button>`).join('') : '';
 
   $('#board').innerHTML = TIERS.map(t => {
     const items = c.nominees.filter(n => d[n.id] === t.id);
@@ -265,7 +305,7 @@ function render(){
   $('#progress').innerHTML = `<b>${placed}</b> of ${c.nominees.length} placed`;
   $('#submitBtn').disabled = !placed;
   const sel = selected && c.nominees.find(n => n.id === selected);
-  $('#hint').innerHTML = sel ? `Selected <b>${esc(sel.song)}</b> — tap a tier to place it, or the nominee pool to remove it.` : 'Drag a card into a tier, or tap a card then tap a tier.';
+  $('#hint').innerHTML = sel ? `Selected <b>${esc(sel.name)}</b> — tap a tier to place it, or the nominee pool to remove it.` : 'Drag a card into a tier, or tap a card then tap a tier.';
 }
 
 /* ===== Placement ===== */
@@ -337,7 +377,7 @@ $('#submitBtn').onclick = async () => {
     submitted[cat().id] = true; LS.set('aw.submitted', submitted);
     LS.set('aw.voter', {name, code});
     $('#doneMsg').textContent = `Thanks ${name}! Your ${cat().title} ballot is in.`;
-    $('#nextCat').hidden = CATEGORIES.length < 2;
+    $('#nextCat').hidden = !CATEGORIES.some(x => x !== cat() && x.nominees.length && !submitted[x.id]);
     drawShare(name);
     show('done');
   } catch (err){ toast(err.message); }
@@ -355,17 +395,18 @@ function drawShare(name){
   x.fillStyle = glow; x.fillRect(0, 0, W, H);
   x.strokeStyle = 'rgba(233,196,106,.35)'; x.lineWidth = 2; x.strokeRect(24, 24, W - 48, H - 48);
   x.textAlign = 'center';
-  x.fillStyle = '#e9c46a'; x.font = `700 22px ${sans}`; x.fillText('A N I M E   X   A N G A S   A W A R D S   2 0 2 6', W / 2, 92);
-  x.fillStyle = metal(110, 160); x.font = `900 50px ${serif}`; x.fillText(`${name}'s ${c.title.replace(' of the Year', '')}s`.toUpperCase(), W / 2, 158, W - 140);
+  x.fillStyle = '#e9c46a'; x.font = `700 20px ${sans}`; x.fillText(EDITION.toUpperCase().split('').join(' '), W / 2, 84, W - 140);
+  x.fillStyle = metal(100, 150); x.font = `900 50px ${serif}`; x.fillText(`${name}'s tier list`.toUpperCase(), W / 2, 146, W - 140);
+  x.fillStyle = 'rgba(245,241,232,.75)'; x.font = `600 24px ${sans}`; x.fillText(c.title, W / 2, 186, W - 140);
   x.textAlign = 'left';
-  const top = 206, rowH = (H - top - 104) / TIERS.length;
+  const top = 222, rowH = (H - top - 104) / TIERS.length;
   TIERS.forEach((t, i) => {
     const y = top + i * rowH;
     x.fillStyle = t.id === 'S' ? metal(y, y + rowH - 12) : css(t.color); x.fillRect(60, y, 110, rowH - 12);
     x.fillStyle = '#16120a'; x.font = `900 60px ${serif}`; x.textAlign = 'center'; x.fillText(t.id, 115, y + rowH / 2 + 18); x.textAlign = 'left';
     x.fillStyle = 'rgba(255,255,255,.05)'; x.fillRect(180, y, W - 240, rowH - 12);
     x.strokeStyle = 'rgba(255,255,255,.1)'; x.lineWidth = 1; x.strokeRect(180.5, y + .5, W - 241, rowH - 13);
-    const songs = c.nominees.filter(n => d[n.id] === t.id).map(n => n.song);
+    const songs = c.nominees.filter(n => d[n.id] === t.id).map(n => n.name);
     x.fillStyle = '#f5f1e8'; x.font = `700 30px ${sans}`;
     let line = '', ly = y + 48;
     songs.forEach((s, j) => {
@@ -377,7 +418,11 @@ function drawShare(name){
   x.textAlign = 'center'; x.fillStyle = 'rgba(245,241,232,.55)'; x.font = `600 20px ${sans}`; x.fillText('Cast your vote · benburnsred.github.io/anivote/awards/vote', W / 2, H - 46); x.textAlign = 'left';
 }
 $('#saveImg').onclick = () => { const a = document.createElement('a'); a.download = `anivote-${cat().id}.png`; a.href = $('#shareCanvas').toDataURL('image/png'); a.click(); };
-$('#nextCat').onclick = () => { catIdx = (catIdx + 1) % CATEGORIES.length; show('vote'); };
+// Next category that has nominees and hasn't been voted in yet.
+$('#nextCat').onclick = () => {
+  for (let k = 1; k <= CATEGORIES.length; k++){ const i = (catIdx + k) % CATEGORIES.length; if (CATEGORIES[i].nominees.length && !submitted[CATEGORIES[i].id]){ catIdx = i; break; } }
+  show('vote');
+};
 $('#seeResults').onclick = () => show('results');
 
 /* ===== Results ===== */
@@ -402,7 +447,7 @@ async function renderResults(){
       const r = await (await fetch(APPS_SCRIPT_URL + '?action=results&category=' + encodeURIComponent(c.id))).json();
       if (!r.ok) throw new Error(r.error || 'Could not load results');
       ballots = r.ballots;
-      rows = c.nominees.map(n => { const s = r.results[n.id] || {points:0, voters:0, dist:{}}; return {n, ...s}; })
+      rows = c.nominees.map(n => { const s = r.results[n.name] || {points:0, voters:0, dist:{}}; return {n, ...s}; })
         .sort((a, b) => b.points - a.points || TIERS.reduce((acc, t) => acc || (b.dist[t.id] || 0) - (a.dist[t.id] || 0), 0));
     } else {
       const all = LS.get('aw.ballots', []);
@@ -414,7 +459,7 @@ async function renderResults(){
   const max = Math.max(1, rows[0].points);
   list.innerHTML = `<p class="score" style="margin:0 0 6px">${ballots} ballot${ballots > 1 ? 's' : ''} · ranked by total points, ties broken by most S, then A…</p>` +
     rows.map((r, i) => `<div class="rank"><div class="n">${i + 1}</div>
-      <div><div class="name">${esc(r.n.song)} <span class="sub">— ${esc(r.n.artist)}</span></div><div class="sub">${esc(r.n.anime)}</div>
+      <div><div class="name">${esc(r.n.name)}</div>${r.n.sub ? `<div class="sub">${esc(r.n.sub)}</div>` : ''}
       <div class="bar"><i style="width:${r.points / max * 100}%"></i></div>
       <div class="dist">${TIERS.filter(t => r.dist[t.id]).map(t => `<span style="background:${t.color}">${t.id}×${r.dist[t.id]}</span>`).join('')}</div></div>
       <div class="pts">${r.points}<small>${r.voters} voter${r.voters === 1 ? '' : 's'}</small></div></div>`).join('');
@@ -469,19 +514,21 @@ async function findCovers(titles){
   return out;
 }
 async function loadCovers(){
-  const want = CATEGORIES.flatMap(c => c.nominees).filter(n => !covers[n.id]);
+  const want = [...new Set(CATEGORIES.flatMap(c => c.nominees).filter(n => !n.image && n.q && !covers[n.q]).map(n => n.q))];
   if (!want.length) return;
-  const found = await findCovers([...new Set(want.map(n => n.q))]);
-  want.forEach(n => { if (found[n.q]) covers[n.id] = found[n.q]; });
-  LS.set('aw.covers2', covers); render();
+  Object.assign(covers, await findCovers(want));
+  LS.set('aw.covers3', covers); if (!$('#voteView').hidden) render();
 }
 
 $('#codeField').hidden = !USE_VOTER_CODES;
 $('.tabs').hidden = $('#seeResults').hidden = !SHOW_RESULTS_TAB;
 const me = LS.get('aw.voter', null);
 if (me){ $('#voterName').value = me.name || ''; $('#voterCode').value = me.code || ''; }
-render();
-loadCovers();
+loadData().then(() => {
+  if (!CATEGORIES.length) throw new Error('No categories found');
+  catIdx = Math.max(0, CATEGORIES.findIndex(c => c.nominees.length));
+  render(); loadCovers();
+}).catch(e => { $('#catTitle').textContent = 'Ballot unavailable'; $('#catBlurb').textContent = `Couldn't load the categories (${e.message}). Please try again later.`; $('#ballot').hidden = true; });
 </script>
 </body>
 </html>

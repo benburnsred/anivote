@@ -93,6 +93,7 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:100;op
 .cat-head{position:relative;text-align:center;margin-bottom:44px}
 .cat-num{position:absolute;left:50%;top:-78px;transform:translateX(-50%);font:900 clamp(110px,18vw,200px)/1 var(--serif);color:transparent;-webkit-text-stroke:1px color-mix(in srgb,var(--c) 22%,transparent);z-index:-1;user-select:none;pointer-events:none}
 .cat-trophy{width:clamp(110px,14vw,150px);aspect-ratio:1;margin:0 auto 22px;border-radius:50%;background:#14121c center/cover;box-shadow:0 0 0 3px #c99a3c,0 0 0 5px rgba(255,241,193,.4),0 20px 50px -14px rgba(0,0,0,.9),0 0 60px -14px color-mix(in srgb,var(--c) 60%,transparent)}
+.win-trophy{position:absolute;top:34px;left:34px;width:clamp(120px,15vw,180px);aspect-ratio:1;border-radius:50%;background:#14121c center/cover;box-shadow:0 0 0 3px #c99a3c,0 0 0 5px rgba(255,241,193,.4),0 20px 50px -14px rgba(0,0,0,.9),0 0 60px -10px rgba(233,196,106,.35)}
 .cat-kicker{display:inline-flex;align-items:center;gap:10px;font:700 11px/1 var(--sans);letter-spacing:.34em;text-transform:uppercase;color:var(--c)}
 .cat-kicker::before,.cat-kicker::after{content:"";width:28px;height:1px;background:var(--c);opacity:.6}
 .cat h2{font:900 clamp(28px,5vw,54px)/1.05 var(--serif);text-transform:uppercase;letter-spacing:.03em;margin:14px 0 10px;text-wrap:balance}
@@ -174,6 +175,7 @@ footer .links a{color:var(--muted);text-decoration:none;margin:0 10px}
 footer .links a:hover{color:var(--gold)}
 
 @media (max-width:860px){
+  .win-trophy{position:relative;top:auto;left:auto;width:110px;margin:22px auto 0}
   .stage.multi{grid-template-columns:1fr}.stage.multi .win .poster{width:58%}
   .stage{grid-template-columns:1fr}
   .win{min-height:0;flex-direction:column;align-items:stretch}
@@ -338,7 +340,8 @@ function stageHTML(c, showRes){
   const ws = c.noms.filter(n => n.winner), rest = c.noms.filter(n => !n.winner);
   const others = rest.map(n => capHTML(n, showRes)).join('');
   const cards = ws.map(w => { const u = img(w), tag = w.link ? 'a' : 'div';
-    return `<${tag} class="win"${linkAttrs(w)}><div class="blur"${bg(u)}></div>
+    const trophy = ws.length === 1 && c.trophy ? `<div class="win-trophy"${bg(c.trophy)} role="img" aria-label="${esc(c.name)} trophy"></div>` : '';
+    return `<${tag} class="win"${linkAttrs(w)}><div class="blur"${bg(u)}></div>${trophy}
       <div class="poster"${bg(u)}>${u ? '' : esc(initials(w.name))}</div>
       <div class="body"><div class="badge metal"><svg><use href="#trophy"/></svg>Winner</div>
       <div class="name"><span class="metal">${esc(w.name)}</span></div>${w.sub ? `<div class="sub">${esc(w.sub)}</div>` : ''}
@@ -400,7 +403,7 @@ function render(){
         : Array.from({length:5}, () => '<div class="cap tba rv"><div class="mono">?</div><div class="info"><div class="name">To be announced</div></div></div>').join('')}</div>`;
     return `<section class="cat" id="${c.id}" style="--c:${c.color}"><div class="cat-head rv">
       <div class="cat-num" aria-hidden="true">${String(i + 1).padStart(2, '0')}</div>
-      ${c.trophy ? `<div class="cat-trophy"${bg(c.trophy)} role="img" aria-label="${esc(c.name)} trophy"></div>` : ''}
+      ${c.trophy && !(hasWin && c.noms.filter(n => n.winner).length === 1) ? `<div class="cat-trophy"${bg(c.trophy)} role="img" aria-label="${esc(c.name)} trophy"></div>` : ''}
       <div class="cat-kicker">Award ${String(i + 1).padStart(2, '0')}</div>
       <h2>${esc(c.name)}</h2>${c.desc ? `<p class="cat-desc">${esc(c.desc)}</p>` : ''}${state}</div>${body}</section>`;
   }).join('') : '<div class="note">Categories will be announced soon. Stay tuned.</div>';

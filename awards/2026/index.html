@@ -119,6 +119,18 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:100;op
 @keyframes shim{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
 
 .winners{padding-top:110px;padding-bottom:20px;text-align:center}
+/* Hosts */
+.hosts{padding-top:110px;text-align:center}
+.hosts h2{font:900 clamp(30px,5.5vw,60px)/1.05 var(--serif);text-transform:uppercase;letter-spacing:.04em;margin:14px 0 44px}
+.host-list{display:flex;justify-content:center;gap:clamp(28px,7vw,110px);flex-wrap:wrap}
+.host{width:min(300px,80vw)}
+.host .pic{width:100%;aspect-ratio:1;border-radius:50%;background:#14121c center/cover;box-shadow:0 0 0 4px #c99a3c,0 0 0 6px rgba(255,241,193,.5),0 30px 70px -20px rgba(0,0,0,.9),0 0 90px -20px rgba(233,196,106,.45)}
+.host .nick{margin-top:26px;font:600 13px/1 var(--sans);letter-spacing:.24em;text-transform:uppercase;color:var(--gold)}
+.host .hname{font:900 clamp(30px,4vw,44px)/1.1 var(--serif);text-transform:uppercase;letter-spacing:.05em;margin:10px 0 8px}
+.host .role{font-size:11px;font-weight:800;letter-spacing:.3em;text-transform:uppercase;color:var(--muted)}
+/* Round profile pictures inside poster cards */
+.cap .ava{position:absolute;left:50%;top:38%;width:64%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;background:center/cover;box-shadow:0 0 0 3px #c99a3c,0 18px 40px -10px rgba(0,0,0,.8)}
+.cap .res{margin-top:6px;font-size:12px;font-weight:800;color:var(--gold)}
 .winners .grid{text-align:left}
 .winners h2{font:900 clamp(30px,5.5vw,60px)/1.05 var(--serif);text-transform:uppercase;letter-spacing:.04em;margin:14px 0 10px}
 .winners .cat-desc{margin-bottom:44px}
@@ -127,9 +139,9 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:100;op
 .wcard .res{margin-top:6px;font-size:12px;font-weight:800;color:var(--gold)}
 
 /* Winner spotlight */
-.stage{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:22px;align-items:stretch}
+.stage{display:grid;grid-template-columns:minmax(0,960px);justify-content:center;gap:22px;align-items:stretch}
 .stage.solo{grid-template-columns:minmax(0,760px);justify-content:center}
-.stage.multi{grid-template-columns:repeat(var(--n),minmax(0,1fr))}.stage.multi .list{grid-column:1/-1}
+.stage.multi{grid-template-columns:repeat(var(--n),minmax(0,1fr));justify-content:stretch}.stage.multi .list{grid-column:1/-1;margin-top:18px}
 .stage.multi .win{min-height:0;flex-direction:column;align-items:stretch}.stage.multi .win .poster{position:relative;inset:auto;transform:none;width:72%;margin:24px auto 0;font-size:48px}
 .stage.multi .win .body{max-width:none;text-align:center;padding:18px 16px 22px}.stage.multi .win .name{font-size:clamp(20px,2.4vw,30px)}
 .win{position:relative;border-radius:0;overflow:hidden;min-height:440px;display:flex;align-items:flex-end;text-decoration:none;isolation:isolate;box-shadow:0 0 0 1px rgba(233,196,106,.55),0 40px 80px -30px rgba(0,0,0,.9),0 0 80px -20px rgba(233,196,106,.35)}
@@ -145,16 +157,7 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:100;op
 .win::after{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;background:linear-gradient(115deg,transparent 40%,rgba(255,240,200,.18) 50%,transparent 60%);transform:translateX(-100%);animation:sweep 6s 1s infinite}
 @keyframes sweep{0%,75%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
 .list{display:flex;flex-direction:column;gap:8px;border-radius:0;padding:18px;background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.015));border:1px solid var(--line)}
-.list h3{margin:2px 4px 8px;font:700 11px/1 var(--sans);letter-spacing:.3em;text-transform:uppercase;color:var(--dim)}
-.row{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:12px;align-items:center;padding:8px;border-radius:0;text-decoration:none;transition:background .2s}
-.row:hover{background:rgba(255,255,255,.05)}
-.row .th{width:44px;height:58px;border-radius:0;background:linear-gradient(150deg,color-mix(in srgb,var(--c) 40%,#1a1828),#0c0b14);background-size:cover;background-position:center;display:grid;place-items:center;font:900 15px/1 var(--serif);color:rgba(255,255,255,.2);box-shadow:0 0 0 1px var(--line)}
-.row .name{font-weight:700;font-size:14px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.row .sub{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.row .bar{height:3px;border-radius:0;background:rgba(255,255,255,.07);margin-top:6px;overflow:hidden}
-.row .bar i{display:block;height:100%;background:var(--c);border-radius:0;transform-origin:left;transform:scaleX(0);transition:transform 1.2s var(--ease)}
-.in .row .bar i{transform:scaleX(var(--w))}
-.row .res{font-size:12px;font-weight:800;color:var(--muted);text-align:right;white-space:nowrap}
+.list h3{margin:0 0 18px;text-align:center;font:700 11px/1 var(--sans);letter-spacing:.3em;text-transform:uppercase;color:var(--dim)}
 
 /* Reveal on scroll */
 .rv{opacity:0;transform:translateY(28px);transition:opacity .9s var(--ease),transform .9s var(--ease)}
@@ -231,6 +234,7 @@ footer .links a:hover{color:var(--gold)}
 </section>
 
 <nav class="catnav" id="catnav" hidden><div class="wrap" id="catlinks"></div></nav>
+<section class="wrap hosts" id="hosts" hidden></section>
 <section class="wrap winners" id="winners" hidden></section>
 <main class="wrap" id="categories"><div class="note">Loading the nominees…</div></main>
 
@@ -248,6 +252,7 @@ footer .links a:hover{color:var(--gold)}
  * (File → Share → Publish to web → pick the tab → CSV). See awards/README.md for the column layout. */
 const NOMINEES_CSV = 'data/nominees.csv';
 const SETTINGS_CSV = 'data/settings.csv';
+const HOSTS_CSV = 'data/hosts.csv'; // optional: name, nickname, image, role
 const REFRESH_SECONDS = 60; // re-check the sheet so winners appear live during the ceremony
 
 const DEFAULTS = {title:'Anime X Angas Awards', tagline:'', date:'', venue:'', stream_url:'', vote_url:'../vote/',
@@ -308,36 +313,28 @@ function build(rows){
     if (!c){ c = byName[name] = {name, id:slug(name), desc:'', color:'', noms:[]}; cats.push(c); }
     if (r.category_description && !c.desc) c.desc = r.category_description;
     if (r.category_color && !c.color) c.color = safeColor(r.category_color);
-    if (r.nominee) c.noms.push({name:r.nominee, sub:r.subtitle, image:safeUrl(r.image), search:r.image_search, link:safeUrl(r.link), winner:yes(r.winner), result:r.result});
+    if (r.nominee) c.noms.push({name:r.nominee, sub:r.subtitle, image:safeUrl(r.image), search:r.image_search, link:safeUrl(r.link), winner:yes(r.winner), result:r.result, avatar:/avatar/i.test(r.image_style || '')});
   }
   cats.forEach((c, i) => c.color ||= PALETTE[i % PALETTE.length]);
   return cats;
 }
 
 /* ===== Rendering ===== */
-let S = {...DEFAULTS}, CATS = [], lastKey = '', covers = store.get('aw.show.covers2', {});
+let HOSTS = [], S = {...DEFAULTS}, CATS = [], lastKey = '', covers = store.get('aw.show.covers2', {});
 const img = n => n.image || covers[n.search] || '';
 const linkAttrs = n => n.link ? ` href="${esc(n.link)}" target="_blank" rel="noopener"` : '';
 
-function capHTML(n){
+function capHTML(n, showRes){
   const tag = n.link ? 'a' : 'div', u = img(n);
-  return `<${tag} class="cap rv"${linkAttrs(n)}><div class="art"${bg(u)}></div>${u ? '' : `<div class="mono">${esc(initials(n.name))}</div>`}
-    <div class="glare"></div><div class="info"><div class="name">${esc(n.name)}</div>${n.sub ? `<div class="sub">${esc(n.sub)}</div>` : ''}</div></${tag}>`;
+  const art = n.avatar && u ? `<div class="art"></div><div class="ava"${bg(u)}></div>` : `<div class="art"${bg(u)}></div>`;
+  return `<${tag} class="cap rv"${linkAttrs(n)}>${art}${u ? '' : `<div class="mono">${esc(initials(n.name))}</div>`}
+    <div class="glare"></div><div class="info"><div class="name">${esc(n.name)}</div>${n.sub ? `<div class="sub">${esc(n.sub)}</div>` : ''}${showRes && n.result ? `<div class="res">${esc(n.result)}</div>` : ''}</div></${tag}>`;
 }
 
 function stageHTML(c, showRes){
   // Several winners (e.g. a top three) share the stage; everyone else goes in the nominee list.
   const ws = c.noms.filter(n => n.winner), rest = c.noms.filter(n => !n.winner);
-  // Result bars only when every result starts with a number.
-  const nums = c.noms.map(n => parseFloat(String(n.result).replace(/,/g, '')));
-  const bars = showRes && nums.every(v => !isNaN(v)) ? Math.max(...nums) || 1 : 0;
-  const rows = rest.map(n => {
-    const t = img(n), v = parseFloat(String(n.result).replace(/,/g, '')), rt = n.link ? 'a' : 'div';
-    return `<${rt} class="row"${linkAttrs(n)}><div class="th"${bg(t)}>${t ? '' : esc(initials(n.name))}</div>
-      <div style="min-width:0"><div class="name">${esc(n.name)}</div>${n.sub ? `<div class="sub">${esc(n.sub)}</div>` : ''}
-      ${bars ? `<div class="bar"><i style="--w:${v / bars}"></i></div>` : ''}</div>
-      ${showRes && n.result ? `<div class="res">${esc(n.result)}</div>` : '<div></div>'}</${rt}>`;
-  }).join('');
+  const others = rest.map(n => capHTML(n, showRes)).join('');
   const cards = ws.map(w => { const u = img(w), tag = w.link ? 'a' : 'div';
     return `<${tag} class="win"${linkAttrs(w)}><div class="blur"${bg(u)}></div>
       <div class="poster"${bg(u)}>${u ? '' : esc(initials(w.name))}</div>
@@ -346,7 +343,7 @@ function stageHTML(c, showRes){
       ${showRes && w.result ? `<div class="res">${esc(w.result)}</div>` : ''}</div></${tag}>`; }).join('');
   const layout = ws.length > 1 ? ' multi' : rest.length ? '' : ' solo';
   return `<div class="stage rv${layout}" style="--n:${ws.length}">${cards}
-    ${rest.length ? `<div class="list"><h3>Nominees</h3>${rows}</div>` : ''}</div>`;
+    ${rest.length ? `<div class="list"><h3>Nominees</h3><div class="grid">${others}</div></div>` : ''}</div>`;
 }
 
 function render(){
@@ -383,6 +380,10 @@ function render(){
     <p class="cat-desc">${wonCats < CATS.length ? `${wonCats} of ${CATS.length} awards revealed so far. Tap a winner for the full category.` : 'Every award, at a glance. Tap a winner for the full category and results.'}</p>
     <div class="grid">${winners.map(([c, w]) => { const u = img(w); return `<a class="cap wcard" href="#${c.id}" style="--c:${c.color}"><div class="art"${bg(u)}></div>${u ? '' : `<div class="mono">${esc(initials(w.name))}</div>`}
       <div class="glare"></div><div class="kick">★ ${esc(c.name)}</div><div class="info"><div class="name">${esc(w.name)}</div>${w.sub ? `<div class="sub">${esc(w.sub)}</div>` : ''}${showRes && w.result ? `<div class="res">${esc(w.result)}</div>` : ''}</div></a>`; }).join('')}</div>` : '';
+  $('#hosts').hidden = !HOSTS.length;
+  $('#hosts').innerHTML = HOSTS.length ? `<div class="cat-kicker" style="--c:var(--gold)">Tonight's ${HOSTS.length > 1 ? 'hosts' : 'host'}</div><h2><span class="metal">Your Hosts</span></h2>
+    <div class="host-list">${HOSTS.map(h => `<div class="host"><div class="pic"${bg(safeUrl(h.image))}></div>${h.nickname ? `<div class="nick">“${esc(h.nickname)}”</div>` : ''}
+      <div class="hname"><span class="metal">${esc(h.name)}</span></div><div class="role">${esc(h.role || 'Host')}</div></div>`).join('')}</div>` : '';
   $('#heroExplore').textContent = winners.length ? 'See the winners' : 'Explore the awards';
   $('#heroExplore').href = winners.length ? '#winners' : '#categories';
 
@@ -505,8 +506,10 @@ addEventListener('scroll', () => {
 /* ===== Load ===== */
 async function load(){
   try {
-    const [rows, settings] = await Promise.all([getCSV(NOMINEES_CSV), SETTINGS_CSV ? getCSV(SETTINGS_CSV).catch(() => []) : []]);
-    const key = JSON.stringify([rows, settings]);
+    const [rows, settings, hosts] = await Promise.all([getCSV(NOMINEES_CSV), SETTINGS_CSV ? getCSV(SETTINGS_CSV).catch(() => []) : [],
+      HOSTS_CSV ? getCSV(HOSTS_CSV).catch(() => []) : []]);
+    const key = JSON.stringify([rows, settings, hosts]);
+    HOSTS = hosts.filter(h => h.name);
     if (key === lastKey) return;
     lastKey = key;
     S = {...DEFAULTS};

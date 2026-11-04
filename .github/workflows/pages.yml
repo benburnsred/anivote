@@ -36,25 +36,26 @@ jobs:
             git commit -m "Add awards cover art"
             git push
           fi
-      # Sharpen small round profile pictures (awards/img/<year>/*-avatar.png) 4x with Real-ESRGAN, once each.
-      # Dependencies are only installed when some avatar has no -hd copy yet; a failure never blocks the deploy.
-      - name: Upscale awards avatars
+      # Sharpen small awards pictures (awards/img/<year>/*) 4x with Real-ESRGAN, once each.
+      # torch is only installed when some picture has no -hd copy yet; a failure never blocks the deploy.
+      - name: Upscale awards pictures
         continue-on-error: true
         run: |
-          PENDING="$(python3 awards/tools/upscale_avatars.py --pending)"
-          if [ -z "$PENDING" ]; then echo "avatars: nothing to upscale"; exit 0; fi
+          pip install -q pillow
+          PENDING="$(python3 awards/tools/upscale_images.py --pending)"
+          if [ -z "$PENDING" ]; then echo "images: nothing to upscale"; exit 0; fi
           # torch and torchvision must come from the same (CPU) index, or spandrel's torchvision import fails.
           pip install -q torch torchvision --index-url https://download.pytorch.org/whl/cpu
           pip install -q spandrel pillow numpy
           mkdir -p /tmp/esrgan
           curl -fsSL -o /tmp/esrgan/RealESRGAN_x4plus_anime_6B.pth https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.2.4/RealESRGAN_x4plus_anime_6B.pth
           curl -fsSL -o /tmp/esrgan/RealESRGAN_x4plus.pth https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth
-          python3 awards/tools/upscale_avatars.py
+          python3 awards/tools/upscale_images.py
           if [ -n "$(git status --porcelain awards)" ]; then
             git config user.name "github-actions[bot]"
             git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
             git add awards
-            git commit -m "Upscale awards avatars"
+            git commit -m "Upscale awards pictures"
             git pull --rebase -q origin main
             git push
           fi

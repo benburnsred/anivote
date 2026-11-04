@@ -128,6 +128,7 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:100;op
 
 /* Winner spotlight */
 .stage{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:22px;align-items:stretch}
+.stage.solo{grid-template-columns:minmax(0,760px);justify-content:center}
 .win{position:relative;border-radius:0;overflow:hidden;min-height:440px;display:flex;align-items:flex-end;text-decoration:none;isolation:isolate;box-shadow:0 0 0 1px rgba(233,196,106,.55),0 40px 80px -30px rgba(0,0,0,.9),0 0 80px -20px rgba(233,196,106,.35)}
 .win .blur{position:absolute;inset:-40px;z-index:-2;background:linear-gradient(150deg,color-mix(in srgb,var(--c) 50%,#1a1828),#0c0b14);background-size:cover;background-position:center;filter:blur(36px) saturate(1.3) brightness(.55);transform:scale(1.1)}
 .win::before{content:"";position:absolute;inset:0;z-index:-1;background:radial-gradient(70% 60% at 30% 100%,rgba(6,6,11,.2),rgba(6,6,11,.85))}
@@ -332,7 +333,7 @@ function stageHTML(c, showRes){
       ${bars ? `<div class="bar"><i style="--w:${v / bars}"></i></div>` : ''}</div>
       ${showRes && n.result ? `<div class="res">${esc(n.result)}</div>` : '<div></div>'}</${rt}>`;
   }).join('');
-  return `<div class="stage rv"><${tag} class="win"${linkAttrs(w)}><div class="blur"${bg(u)}></div>
+  return `<div class="stage rv${rest.length ? '' : ' solo'}"><${tag} class="win"${linkAttrs(w)}><div class="blur"${bg(u)}></div>
       <div class="poster"${bg(u)}>${u ? '' : esc(initials(w.name))}</div>
       <div class="body"><div class="badge metal"><svg><use href="#trophy"/></svg>Winner</div>
       <div class="name"><span class="metal">${esc(w.name)}</span></div>${w.sub ? `<div class="sub">${esc(w.sub)}</div>` : ''}

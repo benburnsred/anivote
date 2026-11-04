@@ -3,7 +3,8 @@
 | Page | URL | What it is |
 |---|---|---|
 | Awards 2025 | https://benburnsred.github.io/anivote/awards/2025/ | Permanent page for the 2025 edition: categories, nominees, winners |
-| Latest awards | https://benburnsred.github.io/anivote/awards/ | Forwards to the newest edition (currently 2025) |
+| Awards 2026 | https://benburnsred.github.io/anivote/awards/2026/ | Current edition: voting open, winners hidden until the ceremony |
+| Latest awards | https://benburnsred.github.io/anivote/awards/ | Forwards to the newest edition (currently 2026) |
 | Ballot | https://benburnsred.github.io/anivote/awards/vote/ | Tier-list voting, saved to a private Google Sheet |
 
 # Awards site (`awards/<year>/index.html`)
@@ -56,11 +57,12 @@ For a live ceremony, set `reveal_winners` to TRUE and fill in each `winner` cell
 
 ## Starting next year's edition
 
-1. Copy `awards/2025/` to `awards/2026/`.
-2. Replace `awards/2026/data/nominees.csv` with the new categories (or point it at a new Google Sheet) and update `settings.csv`: new `title`, `date`, `reveal_winners` FALSE, `vote_open` TRUE.
-3. In `awards/index.html`, change the three `2025/` links to `2026/` so `/awards/` forwards to the new edition.
+1. Copy the latest year's folder (e.g. `awards/2026/`) to the new year (`awards/2027/`).
+2. Replace the new folder's `data/nominees.csv` with the new categories (or point it at a new Google Sheet) and update `settings.csv`: new `title`, `date`, `reveal_winners` FALSE, `vote_open` TRUE.
+3. In `awards/index.html`, change every year link to the new year so `/awards/` forwards to the new edition.
+4. Optionally add a link to the previous year in the new page's footer (2026 links to `../2025/`).
 
-`/awards/2025/` keeps working unchanged.
+Earlier years keep working unchanged.
 
 ## Managing it from Google Sheets
 

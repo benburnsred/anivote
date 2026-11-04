@@ -1,5 +1,7 @@
 # Anime X Angas Awards
 
+**First time setting up the Google Sheet? Follow [SETUP.md](SETUP.md) step by step.**
+
 | Page | URL | What it is |
 |---|---|---|
 | Awards 2025 | https://benburnsred.github.io/anivote/awards/2025/ | Permanent page for the 2025 edition: categories, nominees, winners |

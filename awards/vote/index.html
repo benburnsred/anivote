@@ -6,14 +6,14 @@
 <meta name="theme-color" content="#06060b">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;500;600;700;800;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <title>Anime X Angas Awards — Ballot</title>
 <style>
 :root{
   --bg:#06060b;--bg2:#0b0b14;--panel:rgba(255,255,255,.035);--panel2:rgba(255,255,255,.06);--ink:#f5f1e8;--muted:#9a95a8;--dim:#6b6779;--line:rgba(255,255,255,.08);--line2:rgba(255,255,255,.14);
   --gold:#e9c46a;--metal:linear-gradient(180deg,#fff6d6 0%,#f0d58a 38%,#c99a3c 62%,#f3dc9a 82%,#a8761f 100%);
   --S:#e9c46a;--A:#e8a35a;--B:#cfcabd;--C:#b9814e;--D:#8f9cb5;--good:#7fd6a8;--bad:#ff8a8a;
-  --serif:"Cinzel","Trajan Pro",Georgia,serif;--sans:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;--ease:cubic-bezier(.2,.7,.2,1)
+  --serif:"Montserrat","Helvetica Neue",Arial,sans-serif;--sans:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;--ease:cubic-bezier(.2,.7,.2,1)
 }
 *{box-sizing:border-box}[hidden]{display:none!important}
 html{overflow-x:clip}
@@ -388,7 +388,7 @@ $('#submitBtn').onclick = async () => {
 function drawShare(name){
   const cv = $('#shareCanvas'), x = cv.getContext('2d'), W = 1080, H = 1080, d = draft(), c = cat();
   const css = v => getComputedStyle(document.documentElement).getPropertyValue(v.slice(4, -1)).trim();
-  const serif = 'Cinzel,Georgia,serif', sans = 'Inter,system-ui,sans-serif';
+  const serif = 'Montserrat,Arial,sans-serif', sans = 'Inter,system-ui,sans-serif';
   const metal = (y0, y1) => { const m = x.createLinearGradient(0, y0, 0, y1); [['0', '#fff6d6'], ['.38', '#f0d58a'], ['.62', '#c99a3c'], ['.82', '#f3dc9a'], ['1', '#a8761f']].forEach(([o, c]) => m.addColorStop(+o, c)); return m; };
   x.fillStyle = '#07070b'; x.fillRect(0, 0, W, H);
   const glow = x.createRadialGradient(W / 2, -60, 0, W / 2, -60, 760); glow.addColorStop(0, 'rgba(160,110,35,.5)'); glow.addColorStop(1, 'rgba(0,0,0,0)');

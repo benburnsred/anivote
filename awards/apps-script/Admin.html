@@ -112,8 +112,8 @@ function call(fn, ...args){
 
 function open(c){
   if (c.type === 'special') return true;
-  const now = new Date();
-  return !(c.opens && now < new Date(c.opens)) && !(c.closes && now > new Date(c.closes));
+  const now = new Date(), s = STATE.settings; // one voting window for the whole event
+  return s.vote_open !== 'FALSE' && !(s.voting_opens && now < new Date(s.voting_opens)) && !(s.voting_closes && now > new Date(s.voting_closes));
 }
 const nomsOf = id => STATE.nominees.filter(n => n.category_id === id);
 const methodLabel = c => c.type === 'special' ? 'Special award: committee picks the winner' : (STATE.methods[c.method] || STATE.methods.tier).replace('N', c.max_picks || 3);
@@ -133,10 +133,7 @@ function categoryForm(c){
       <label>Voting method<select name="method">${methods}</select></label>
       <label class="picks">How many picks / ranks (N)<input name="max_picks" type="number" min="1" max="20" value="${esc(c.max_picks || '')}" placeholder="3"></label>
     </div></fieldset>
-    <fieldset class="vote-only"><legend>Schedule (optional)</legend><div class="grid">
-      <label>Voting opens<input name="opens" type="datetime-local" value="${esc(local(c.opens))}"></label>
-      <label>Voting closes<input name="closes" type="datetime-local" value="${esc(local(c.closes))}"></label>
-    </div></fieldset>
+
     <div class="row"><button class="primary">${c.id ? 'Save category' : 'Add category'}</button>${c.id ? '' : '<button type="button" data-cancel>Cancel</button>'}</div>
   </form>`;
 }
@@ -148,7 +145,7 @@ function nomineeForm(catId, n){
       <label>Nominee<input name="name" value="${esc(n.name)}" required></label>
       <label>Subtitle (artist, studio…)<input name="subtitle" value="${esc(n.subtitle)}"></label>
       <label>Image link (optional)<input name="image" value="${esc(n.image)}" placeholder="https://…"></label>
-      <label>Anime title for automatic poster (optional)<input name="image_search" value="${esc(n.image_search)}"></label>
+      <label>Anime title, for an automatic poster (optional)<input name="image_search" value="${esc(n.image_search)}" placeholder="e.g. Sousou no Frieren 2nd Season"></label>
       <label>Watch / listen link (optional)<input name="link" value="${esc(n.link)}" placeholder="https://youtube.com/…"></label>
     </div>
     <div class="row"><button class="primary">${n.id ? 'Save nominee' : 'Add nominee'}</button>${n.id ? '<button type="button" data-cancel-nom>Cancel</button>' : ''}</div>
@@ -182,7 +179,7 @@ function renderCategories(){
       <div class="title">${esc(c.name)}${status}<div class="meta">${esc(methodLabel(c))} · ${noms.length} nominees${c.type === 'special' ? '' : ` · ${c.ballots} ballots`}${winners.length ? ` · <span class="done">✓ Winner: ${esc(winners.map(w => w.name).join(', '))}</span>` : ''}</div></div>
       <span class="meta">${OPEN === c.id ? '▲' : '▼'}</span></div>${body}</div>`;
   }).join('');
-  return `<div class="row" style="margin-bottom:12px"><span class="note" style="margin:0">Changes are saved right away but only appear on the public site after <b>Publish to site</b>.</span><span class="spacer"></span><button class="primary" id="addcat">Add category</button></div>
+  return `<div class="row" style="margin-bottom:12px"><span class="note" style="margin:0">Changes are saved right away but only appear on the public site after <b>Publish to site</b>.</span><span class="spacer"></span><button id="posters" title="Look up a poster for every nominee that has an anime title but no picture">Find posters</button><button class="primary" id="addcat">Add category</button></div>
     <div class="legend"><span style="--c:var(--vote)">Public vote</span><span style="--c:var(--special)">Special award</span><span style="--c:var(--lock)">Locked (published)</span></div>
     <div id="newcat"></div>${list || '<p class="note">No categories yet. Add the first one.</p>'}`;
 }
@@ -228,7 +225,8 @@ function renderResults(){
 const SETTING_GROUPS = [
   ['Event', '', [['title', 'Event title', 'text'], ['tagline', 'Tagline', 'text'], ['date', 'Ceremony date and time', 'datetime-local'],
     ['venue', 'Venue', 'text'], ['stream_url', 'Livestream link', 'text']]],
-  ['Voting & reveal', 'reveal', [['vote_open', 'Voting open', 'bool'], ['reveal_winners', 'Reveal winners on the site', 'bool'],
+  ['Voting & reveal', 'reveal', [['vote_open', 'Voting open', 'bool'], ['voting_opens', 'Voting starts (optional)', 'datetime-local'],
+    ['voting_closes', 'Voting ends (optional)', 'datetime-local'], ['reveal_winners', 'Reveal winners on the site', 'bool'],
     ['show_results', 'Show points on the site', 'bool']]],
   ['Social links', '', [['facebook_url', 'Facebook link', 'text'], ['youtube_url', 'YouTube link', 'text'], ['discord_url', 'Discord link', 'text']]],
   ['Votes data', 'voting', [['votes_sheet_id', 'Votes spreadsheet ID (blank = this sheet)', 'text'], ['votes_tab', 'Votes tab name', 'text']]]];
@@ -246,7 +244,7 @@ function renderSettings(){
   return `<form id="settings" class="card"><div class="body" style="border:0">${SETTING_GROUPS.map(([title, cls, fields]) =>
     `<fieldset class="${cls}"><legend>${title}</legend><div class="grid">${fields.map(settingField).join('')}</div>
      ${title === 'Votes data' ? `<p class="note">${source}<br>The spreadsheet ID is the long code in its link: docs.google.com/spreadsheets/d/<b>ID</b>/edit. Map its columns in this sheet's VotesMapping tab.</p>` : ''}
-     ${title === 'Voting & reveal' ? '<p class="note">After the ceremony: Voting open → No, Reveal winners → Yes, then Publish.</p>' : ''}</fieldset>`).join('')}
+     ${title === 'Voting & reveal' ? '<p class="note">Voting starts/ends apply to every category: the ballot opens and closes by itself at those times (leave blank for no limit). Voting open = No closes it right away. After the ceremony: Voting open → No, Reveal winners → Yes, then Publish.</p>' : ''}</fieldset>`).join('')}
     <div class="row"><button class="primary">Save settings</button><span class="meta">Settings go live on the site right away; no publish needed.</span></div></div></form>`;
 }
 
@@ -260,7 +258,11 @@ function render(){
   const st = STATE.settings, cats = STATE.categories;
   const ballots = cats.reduce((n, c) => n + (Number(c.ballots) || 0), 0);
   $('#status').innerHTML = [
-    st.vote_open === 'TRUE' ? '<span class="pill on"><i></i>Voting open</span>' : '<span class="pill off"><i></i>Voting closed</span>',
+    (() => { const now = new Date(), o = st.voting_opens && new Date(st.voting_opens), c = st.voting_closes && new Date(st.voting_closes);
+      if (st.vote_open !== 'TRUE') return '<span class="pill off"><i></i>Voting closed</span>';
+      if (o && now < o) return `<span class="pill warn"><i></i>Voting starts ${o.toLocaleString()}</span>`;
+      if (c && now > c) return '<span class="pill off"><i></i>Voting ended</span>';
+      return `<span class="pill on"><i></i>Voting open${c ? ' until ' + c.toLocaleString() : ''}</span>`; })(),
     st.reveal_winners === 'TRUE' ? '<span class="pill on"><i></i>Winners revealed</span>' : '<span class="pill"><i></i>Winners hidden</span>',
     STATE.unpublished ? '<span class="pill warn"><i></i>Unpublished changes</span>' : '<span class="pill on"><i></i>Site up to date</span>',
     `<span class="pill">${cats.length} categories · ${STATE.nominees.length} nominees · ${ballots} ballots</span>`,
@@ -301,13 +303,13 @@ document.addEventListener('submit', e => {
   e.preventDefault();
   const f = e.target;
   if (f.classList.contains('catform')){
-    const d = data(f); d.id = f.dataset.id; d.opens = iso(d.opens); d.closes = iso(d.closes);
+    const d = data(f); d.id = f.dataset.id;
     call('adminSaveCategory', d).then(s => { if (s){ toast('Category saved'); if (!d.id){ OPEN = s.categories[s.categories.length - 1].id; render(); } } });
   } else if (f.classList.contains('nomform')){
     const d = data(f); d.id = f.dataset.id; d.category_id = f.dataset.cat;
     call('adminSaveNominee', d).then(s => { if (s){ EDIT_NOM = null; render(); toast('Nominee saved'); } });
   } else if (f.id === 'settings'){
-    const d = data(f); d.date = iso(d.date);
+    const d = data(f); ['date', 'voting_opens', 'voting_closes'].forEach(k => d[k] = iso(d[k]));
     call('adminSaveSettings', d).then(s => s && toast('Settings saved'));
   }
 });
@@ -315,6 +317,7 @@ document.addEventListener('submit', e => {
 document.addEventListener('click', e => {
   const t = e.target.closest('button,[data-open],.pill[data-tab]'); if (!t) return;
   if (t.dataset.tab){ TAB = t.dataset.tab; render(); return; }
+  if (t.id === 'posters'){ call('adminFillPosters').then(s => s && toast(s.message)); return; }
   if (t.id === 'addcat'){ $('#newcat').innerHTML = `<div class="card"><div class="body" style="border:0">${categoryForm()}</div></div>`; syncForm($('#newcat form')); return; }
   if ('cancel' in t.dataset){ $('#newcat').innerHTML = ''; return; }
   if ('cancelNom' in t.dataset){ EDIT_NOM = null; render(); return; }

@@ -259,10 +259,11 @@ async function getCSV(u){
   return parseCSV(await res.text());
 }
 
-// Voting is closed for the whole event (vote_open setting) or outside this category's window.
-function isClosed(c){
+// One voting window for the whole event: vote_open, plus optional voting_opens / voting_closes settings.
+function isClosed(){
   const now = new Date();
-  return SETTINGS.vote_open === 'FALSE' || (c.opens && now < new Date(c.opens)) || (c.closes && now > new Date(c.closes));
+  return SETTINGS.vote_open === 'FALSE' || (SETTINGS.voting_opens && now < new Date(SETTINGS.voting_opens))
+    || (SETTINGS.voting_closes && now > new Date(SETTINGS.voting_closes));
 }
 const picksMax = c => c.method === 'single' ? 1 : Math.min(c.max, c.nominees.length);
 
@@ -319,11 +320,13 @@ function render(){
   const c = cat(), d = draft();
   $('#catTitle').textContent = c.title;
   const closed = c.nominees.length && isClosed(c), tier = c.method === 'tier';
-  $('#catBlurb').textContent = [c.blurb, c.nominees.length && !closed ? RULES[c.method](picksMax(c)) : ''].filter(Boolean).join(' ');
+  const ends = SETTINGS.voting_closes && !closed ? `Voting ends ${new Date(SETTINGS.voting_closes).toLocaleString()}.` : '';
+  $('#catBlurb').textContent = [c.blurb, c.nominees.length && !closed ? RULES[c.method](picksMax(c)) : '', c.nominees.length ? ends : ''].filter(Boolean).join(' ');
   $('#eyebrow').textContent = 'Official ballot · ' + (EDITION.match(/\d{4}/) || [''])[0];
   $('#soon').hidden = !!c.nominees.length && !closed; $('#ballot').hidden = !c.nominees.length || closed;
-  $('#soonTitle').textContent = closed ? 'Voting is closed' : 'Nominees coming soon';
-  $('#soonText').textContent = closed ? (c.opens && new Date() < new Date(c.opens) ? `Voting for this award opens ${new Date(c.opens).toLocaleString()}.` : 'Voting for this award has closed. Thanks to everyone who voted!')
+  const startsLater = SETTINGS.voting_opens && new Date() < new Date(SETTINGS.voting_opens);
+  $('#soonTitle').textContent = closed ? (startsLater ? 'Voting opens soon' : 'Voting is closed') : 'Nominees coming soon';
+  $('#soonText').textContent = closed ? (startsLater ? `Voting opens ${new Date(SETTINGS.voting_opens).toLocaleString()}.` : 'Voting has closed. Thanks to everyone who voted!')
     : 'The nominees for this award haven\'t been announced yet. Check back soon, or vote in another category.';
   $('#board').hidden = !tier; $('#poolWrap').classList.toggle('picking', !tier);
   $('#poolTitle').textContent = c.nominees.some(n => n.link) ? 'Nominees — tap ▶ to watch' : 'Nominees';

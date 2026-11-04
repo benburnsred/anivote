@@ -12,6 +12,7 @@
  * Tabs (created by setup()):
  *   Settings   — key | value                 (title, date, vote_open, reveal_winners, …)
  *   Categories — id | name | description | type | method | max_picks | opens | closes | order | locked
+ *                (opens/closes are unused: the voting window is the voting_opens / voting_closes settings)
  *                locked: TRUE once published with nominees — nominees and voting method can't change until unlocked
  *                type: vote (public ballot) or special (committee picks the winner, not on the ballot)
  *                method: tier, single, multi or rank (see METHODS)
@@ -70,7 +71,7 @@ const SITE_HEADERS = ['category', 'category_description', 'category_color', 'nom
 const VOTE_FIELDS = ['timestamp', 'voter', 'code', 'category', 'nominee', 'value', 'points'];
 const DEFAULT_SETTINGS = [['title', 'Anime X Angas Awards 2026'], ['tagline', ''], ['date', ''], ['venue', ''],
   ['stream_url', ''], ['vote_url', '../vote/'], ['vote_open', 'TRUE'], ['reveal_winners', 'FALSE'], ['show_results', 'FALSE'],
-  ['trophy_image', '../img/trophy.webp'], ['votes_sheet_id', ''], ['votes_tab', 'Votes'], ['facebook_url', 'https://www.facebook.com/AnimexAngas'],
+  ['trophy_image', '../img/trophy.webp'], ['voting_opens', ''], ['voting_closes', ''], ['votes_sheet_id', ''], ['votes_tab', 'Votes'], ['facebook_url', 'https://www.facebook.com/AnimexAngas'],
   ['youtube_url', 'https://www.youtube.com/@AnimexAngas'], ['discord_url', 'https://discord.gg/AnimexAngas']];
 
 function setup() {
@@ -267,10 +268,12 @@ function doPost(e) {
 
 /* ===== Public voting ===== */
 
+// One voting window for the whole event: the voting_opens / voting_closes settings (either can be blank).
 function isOpen(c, now) {
   if (c.type === 'special') return false;
-  if (c.opens && now < new Date(c.opens)) return false;
-  if (c.closes && now > new Date(c.closes)) return false;
+  const s = settingsMap();
+  if (s.voting_opens && now < new Date(s.voting_opens)) return false;
+  if (s.voting_closes && now > new Date(s.voting_closes)) return false;
   return true;
 }
 
@@ -317,7 +320,7 @@ function recordVote(b) {
   if (settingsMap().vote_open === 'FALSE') return {ok: false, error: 'Voting is closed'};
   const c = readTable('Categories').find(x => x.id === categoryId);
   if (!c) return {ok: false, error: 'Invalid ballot'};
-  if (!isOpen(c, new Date())) return {ok: false, error: 'Voting for this award is closed'};
+  if (!isOpen(c, new Date())) return {ok: false, error: c.type === 'special' ? 'This award isn\'t voted on' : 'Voting is closed'};
   if (!placements.length) return {ok: false, error: 'Empty ballot'};
   const nomineeIds = readTable('Nominees').filter(n => n.category_id === categoryId).map(n => n.id);
   let scored;
@@ -439,8 +442,8 @@ function adminSaveCategory(c) {
       type: c.type === 'special' ? 'special' : 'vote',
       method: METHODS[c.method] ? c.method : 'tier',
       max_picks: String(parseInt(c.max_picks, 10) || ''),
-      opens: String(c.opens || ''),
-      closes: String(c.closes || '')
+      opens: '',
+      closes: ''
     };
     let row = rows.find(r => r.id === c.id);
     if (row && row.locked === 'TRUE' && (clean.method !== row.method || clean.max_picks !== row.max_picks || clean.type !== row.type)) {
@@ -481,6 +484,48 @@ function adminMoveCategory(id, dir) {
   });
 }
 
+// Poster art for an anime title from AniList (then Jikan), or '' if not found. Several titles can be given,
+// separated by ' | ', and are tried in order.
+function findPoster(titles) {
+  for (const t of String(titles || '').split('|').map(x => x.trim()).filter(Boolean)) {
+    try {
+      const res = UrlFetchApp.fetch('https://graphql.anilist.co', {method: 'post', contentType: 'application/json', muteHttpExceptions: true,
+        payload: JSON.stringify({query: 'query($s:String){Media(search:$s,type:ANIME,format_not_in:[SPECIAL,OVA,TV_SHORT,MUSIC]){coverImage{extraLarge large}}}', variables: {s: t}})});
+      const c = ((JSON.parse(res.getContentText()).data || {}).Media || {}).coverImage || {};
+      const url = c.extraLarge || c.large;
+      if (url && url.indexOf('/default') < 0) return url; // AniList's "NO IMAGE" placeholder doesn't count
+    } catch (err) { console.error(err); }
+  }
+  try {
+    const first = String(titles || '').split('|')[0].trim();
+    if (first) {
+      const j = JSON.parse(UrlFetchApp.fetch('https://api.jikan.moe/v4/anime?limit=1&q=' + encodeURIComponent(first), {muteHttpExceptions: true}).getContentText());
+      const im = ((j.data || [])[0] || {}).images || {};
+      return (im.jpg || {}).large_image_url || (im.webp || {}).large_image_url || '';
+    }
+  } catch (err) { console.error(err); }
+  return '';
+}
+
+// Fills in the picture of every nominee that has an anime title but no picture yet.
+function adminFillPosters() {
+  const email = requireCommittee();
+  return withLock(() => {
+    const rows = readTable('Nominees');
+    let found = 0, missed = [];
+    rows.forEach(r => {
+      if (r.image || !r.image_search) return;
+      r.image = findPoster(r.image_search);
+      if (r.image) found++; else missed.push(r.name);
+    });
+    if (found) writeTable('Nominees', TABS.Nominees, rows);
+    log(email, 'find posters', found + ' found' + (missed.length ? '; not found: ' + missed.join(', ') : ''));
+    const st = adminState();
+    st.message = found + ' poster' + (found === 1 ? '' : 's') + ' found' + (missed.length ? ' · not found: ' + missed.join(', ') : '');
+    return st;
+  });
+}
+
 function adminSaveNominee(n) {
   const email = requireCommittee();
   return withLock(() => {
@@ -492,6 +537,8 @@ function adminSaveNominee(n) {
     if (cat.locked === 'TRUE') throw new Error('This category is locked: unlock it to change nominees');
     const clean = {name: name, subtitle: String(n.subtitle || '').trim(), image: String(n.image || '').trim(),
       image_search: String(n.image_search || '').trim(), link: String(n.link || '').trim()};
+    // An anime title without a picture: look the poster up now, so the site gets a real image link.
+    if (!clean.image && clean.image_search) clean.image = findPoster(clean.image_search);
     let row = rows.find(r => r.id === n.id);
     if (row) Object.assign(row, clean);
     else rows.push(Object.assign({id: newId(), category_id: n.category_id, winner: ''}, clean));
@@ -547,7 +594,7 @@ function adminPublish() {
     const rows = [];
     cats.forEach(c => {
       const base = {category: c.name, category_description: c.description, category_id: c.id, category_type: c.type,
-        method: c.method, max_picks: c.max_picks, opens: c.opens, closes: c.closes};
+        method: c.method, max_picks: c.max_picks, opens: '', closes: ''};
       const list = noms.filter(n => n.category_id === c.id);
       if (!list.length) rows.push(base);
       list.forEach(n => rows.push(Object.assign({}, base, {nominee: n.name, subtitle: n.subtitle, image: n.image,

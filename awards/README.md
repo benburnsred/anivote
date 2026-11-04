@@ -173,7 +173,9 @@ A simple admin page for the committee, served by the same Apps Script (`apps-scr
 - **Create categories:** name, description, and type:
   - **Public vote:** appears on the ballot.
   - **Special award / mention:** no voting. The committee ticks the winner.
-- **Choose a voting method per category:** tier list (S=5 … D=1), pick one, pick up to N, or rank top N (1st = N points … Nth = 1). Each category can have optional voting open/close times.
+- **Choose a voting method per category:** tier list (S=5 … D=1), pick one, pick up to N, or rank top N (1st place scores most).
+- **Set one voting window for the whole event:** Settings → Voting starts / Voting ends. The ballot opens and closes by itself; Voting open = No closes it at once.
+- **Automatic posters:** a nominee saved with an anime title and no picture gets its poster from AniList (then MyAnimeList) straight away. **Find posters** fills in any that are missing. Pictures that live elsewhere are downloaded into the site when the edition is archived.
 - **Add, edit and delete nominees:** with picture, subtitle, anime title for an automatic poster, and a watch/listen link. Categories and nominees that already have votes can't be deleted.
 - **Reorder categories.**
 - **See live results (committee only):** points, voters and first-place picks. Ties are flagged, and the committee ticks the winner(s).

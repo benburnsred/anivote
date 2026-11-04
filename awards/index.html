@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#06060b">
-<title>AniVote Awards</title>
+<title>AxA Awards</title>
 <meta name="description" content="The community anime awards — categories, nominees and winners.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -34,7 +34,7 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:100;op
 .brand{display:flex;align-items:center;gap:10px;text-decoration:none;font-family:var(--serif);font-weight:800;letter-spacing:.16em;font-size:14px;text-transform:uppercase;min-width:0}
 .brand span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .brand svg{width:22px;height:22px;flex:none}
-.btn{position:relative;display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line2);background:rgba(255,255,255,.04);color:var(--ink);padding:12px 22px;border-radius:999px;font:700 13px/1 var(--sans);letter-spacing:.08em;text-transform:uppercase;text-decoration:none;cursor:pointer;white-space:nowrap;transition:transform .2s var(--ease),background .2s,border-color .2s;overflow:hidden}
+.btn{position:relative;display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line2);background:rgba(255,255,255,.04);color:var(--ink);padding:12px 22px;border-radius:0;font:700 13px/1 var(--sans);letter-spacing:.08em;text-transform:uppercase;text-decoration:none;cursor:pointer;white-space:nowrap;transition:transform .2s var(--ease),background .2s,border-color .2s;overflow:hidden}
 .btn:hover{transform:translateY(-1px);border-color:rgba(255,255,255,.3);background:rgba(255,255,255,.08)}
 .btn.gold{background:var(--metal);color:#241804;border-color:transparent;box-shadow:0 8px 30px rgba(233,196,106,.28),inset 0 1px 0 rgba(255,255,255,.6)}
 .btn.gold::after{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 35%,rgba(255,255,255,.65) 50%,transparent 65%);transform:translateX(-120%);animation:sheen 4.5s 1.5s infinite}
@@ -63,14 +63,12 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:100;op
 .when::before,.when::after{content:"";width:40px;height:1px;background:linear-gradient(90deg,transparent,var(--gold))}
 .when::after{transform:scaleX(-1)}
 .count{display:flex;justify-content:center;gap:12px;margin:26px 0 0}
-.count div{width:86px;padding:14px 0 12px;border-radius:16px;background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.02));border:1px solid var(--line2);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.count div{width:86px;padding:14px 0 12px;border-radius:0;background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.02));border:1px solid var(--line2);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
 .count b{display:block;font:800 34px/1 var(--serif);font-variant-numeric:tabular-nums}
 .count span{display:block;margin-top:6px;font-size:10px;letter-spacing:.28em;text-transform:uppercase;color:var(--muted);font-weight:700}
 .ctas{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:34px}
-.status{margin-top:28px;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);font-weight:700}
-.status b{color:var(--gold)}
-.scroll-cue{position:absolute;bottom:26px;left:50%;transform:translateX(-50%);width:22px;height:36px;border:1.5px solid var(--line2);border-radius:12px}
-.scroll-cue::after{content:"";position:absolute;left:50%;top:7px;width:3px;height:7px;margin-left:-1.5px;border-radius:2px;background:var(--gold);animation:cue 2s infinite}
+.scroll-cue{position:absolute;bottom:26px;left:50%;transform:translateX(-50%);width:22px;height:36px;border:1.5px solid var(--line2);border-radius:0}
+.scroll-cue::after{content:"";position:absolute;left:50%;top:7px;width:3px;height:7px;margin-left:-1.5px;border-radius:0;background:var(--gold);animation:cue 2s infinite}
 @keyframes cue{0%{opacity:0;transform:translateY(0)}40%{opacity:1}100%{opacity:0;transform:translateY(12px)}}
 
 /* ===== Category nav ===== */
@@ -92,11 +90,11 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:100;op
 .cat-kicker::before,.cat-kicker::after{content:"";width:28px;height:1px;background:var(--c);opacity:.6}
 .cat h2{font:900 clamp(28px,5vw,54px)/1.05 var(--serif);text-transform:uppercase;letter-spacing:.03em;margin:14px 0 10px;text-wrap:balance}
 .cat-desc{margin:0 auto;color:var(--muted);max-width:560px}
-.cat-state{display:inline-block;margin-top:16px;font-size:11px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);padding:7px 14px;border:1px solid var(--line2);border-radius:999px}
+.cat-state{display:inline-block;margin-top:16px;font-size:11px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);padding:7px 14px;border:1px solid var(--line2);border-radius:0}
 
 /* Nominee capsules */
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,214px));justify-content:center;gap:18px;perspective:1200px}
-.cap{--rx:0deg;--ry:0deg;--mx:50%;--my:50%;position:relative;display:block;text-decoration:none;border-radius:18px;overflow:hidden;background:var(--bg2);aspect-ratio:3/4;transform:rotateX(var(--rx)) rotateY(var(--ry));transform-style:preserve-3d;transition:transform .5s var(--ease),box-shadow .4s;box-shadow:0 20px 40px -18px rgba(0,0,0,.8),0 0 0 1px var(--line)}
+.cap{--rx:0deg;--ry:0deg;--mx:50%;--my:50%;position:relative;display:block;text-decoration:none;border-radius:0;overflow:hidden;background:var(--bg2);aspect-ratio:3/4;transform:rotateX(var(--rx)) rotateY(var(--ry));transform-style:preserve-3d;transition:transform .5s var(--ease),box-shadow .4s;box-shadow:0 20px 40px -18px rgba(0,0,0,.8),0 0 0 1px var(--line)}
 .cap:hover{box-shadow:0 30px 60px -20px rgba(0,0,0,.9),0 0 0 1px color-mix(in srgb,var(--c) 70%,transparent),0 0 40px -6px color-mix(in srgb,var(--c) 45%,transparent)}
 .cap.tilting{transition:transform .08s linear,box-shadow .4s}
 .cap .art{position:absolute;inset:0;background:linear-gradient(150deg,color-mix(in srgb,var(--c) 40%,#1a1828),#0c0b14 75%);background-size:cover;background-position:center 20%;transition:transform .8s var(--ease)}
@@ -116,27 +114,27 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:100;op
 
 /* Winner spotlight */
 .stage{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:22px;align-items:stretch}
-.win{position:relative;border-radius:22px;overflow:hidden;min-height:440px;display:flex;align-items:flex-end;text-decoration:none;isolation:isolate;box-shadow:0 0 0 1px rgba(233,196,106,.55),0 40px 80px -30px rgba(0,0,0,.9),0 0 80px -20px rgba(233,196,106,.35)}
+.win{position:relative;border-radius:0;overflow:hidden;min-height:440px;display:flex;align-items:flex-end;text-decoration:none;isolation:isolate;box-shadow:0 0 0 1px rgba(233,196,106,.55),0 40px 80px -30px rgba(0,0,0,.9),0 0 80px -20px rgba(233,196,106,.35)}
 .win .blur{position:absolute;inset:-40px;z-index:-2;background:linear-gradient(150deg,color-mix(in srgb,var(--c) 50%,#1a1828),#0c0b14);background-size:cover;background-position:center;filter:blur(36px) saturate(1.3) brightness(.55);transform:scale(1.1)}
 .win::before{content:"";position:absolute;inset:0;z-index:-1;background:radial-gradient(70% 60% at 30% 100%,rgba(6,6,11,.2),rgba(6,6,11,.85))}
-.win .poster{position:absolute;right:30px;top:50%;transform:translateY(-50%) rotate(2deg);width:min(38%,300px);aspect-ratio:3/4;border-radius:14px;background:linear-gradient(150deg,color-mix(in srgb,var(--c) 40%,#1a1828),#0c0b14);background-size:cover;background-position:center;box-shadow:0 30px 60px -10px rgba(0,0,0,.8),0 0 0 1px rgba(255,255,255,.12);display:grid;place-items:center;font:900 64px/1 var(--serif);color:rgba(255,255,255,.14)}
+.win .poster{position:absolute;right:30px;top:50%;transform:translateY(-50%) rotate(2deg);width:min(38%,300px);aspect-ratio:3/4;border-radius:0;background:linear-gradient(150deg,color-mix(in srgb,var(--c) 40%,#1a1828),#0c0b14);background-size:cover;background-position:center;box-shadow:0 30px 60px -10px rgba(0,0,0,.8),0 0 0 1px rgba(255,255,255,.12);display:grid;place-items:center;font:900 64px/1 var(--serif);color:rgba(255,255,255,.14)}
 .win .body{position:relative;padding:34px;max-width:58%}
 .win .badge{display:inline-flex;align-items:center;gap:10px;font:800 12px/1 var(--serif);letter-spacing:.34em;text-transform:uppercase}
 .win .badge svg{width:30px;height:30px}
 .win .name{font:900 clamp(28px,4vw,46px)/1.02 var(--serif);text-transform:uppercase;margin:16px 0 10px;letter-spacing:.02em;text-wrap:balance}
 .win .sub{color:#d6d1de;font-size:15px}
-.win .res{display:inline-block;margin-top:16px;font-weight:800;color:var(--gold);font-size:14px;letter-spacing:.06em;padding:7px 12px;border-radius:8px;background:rgba(233,196,106,.1);border:1px solid rgba(233,196,106,.3)}
+.win .res{display:inline-block;margin-top:16px;font-weight:800;color:var(--gold);font-size:14px;letter-spacing:.06em;padding:7px 12px;border-radius:0;background:rgba(233,196,106,.1);border:1px solid rgba(233,196,106,.3)}
 .win::after{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;background:linear-gradient(115deg,transparent 40%,rgba(255,240,200,.18) 50%,transparent 60%);transform:translateX(-100%);animation:sweep 6s 1s infinite}
 @keyframes sweep{0%,75%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
-.list{display:flex;flex-direction:column;gap:8px;border-radius:22px;padding:18px;background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.015));border:1px solid var(--line)}
+.list{display:flex;flex-direction:column;gap:8px;border-radius:0;padding:18px;background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.015));border:1px solid var(--line)}
 .list h3{margin:2px 4px 8px;font:700 11px/1 var(--sans);letter-spacing:.3em;text-transform:uppercase;color:var(--dim)}
-.row{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:12px;align-items:center;padding:8px;border-radius:12px;text-decoration:none;transition:background .2s}
+.row{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:12px;align-items:center;padding:8px;border-radius:0;text-decoration:none;transition:background .2s}
 .row:hover{background:rgba(255,255,255,.05)}
-.row .th{width:44px;height:58px;border-radius:8px;background:linear-gradient(150deg,color-mix(in srgb,var(--c) 40%,#1a1828),#0c0b14);background-size:cover;background-position:center;display:grid;place-items:center;font:900 15px/1 var(--serif);color:rgba(255,255,255,.2);box-shadow:0 0 0 1px var(--line)}
+.row .th{width:44px;height:58px;border-radius:0;background:linear-gradient(150deg,color-mix(in srgb,var(--c) 40%,#1a1828),#0c0b14);background-size:cover;background-position:center;display:grid;place-items:center;font:900 15px/1 var(--serif);color:rgba(255,255,255,.2);box-shadow:0 0 0 1px var(--line)}
 .row .name{font-weight:700;font-size:14px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .row .sub{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.row .bar{height:3px;border-radius:3px;background:rgba(255,255,255,.07);margin-top:6px;overflow:hidden}
-.row .bar i{display:block;height:100%;background:var(--c);border-radius:3px;transform-origin:left;transform:scaleX(0);transition:transform 1.2s var(--ease)}
+.row .bar{height:3px;border-radius:0;background:rgba(255,255,255,.07);margin-top:6px;overflow:hidden}
+.row .bar i{display:block;height:100%;background:var(--c);border-radius:0;transform-origin:left;transform:scaleX(0);transition:transform 1.2s var(--ease)}
 .in .row .bar i{transform:scaleX(var(--w))}
 .row .res{font-size:12px;font-weight:800;color:var(--muted);text-align:right;white-space:nowrap}
 
@@ -183,7 +181,7 @@ footer .links a:hover{color:var(--gold)}
 </svg>
 
 <header class="top" id="top"><div class="wrap">
-  <a class="brand" href="#"><svg><use href="#trophy"/></svg><span id="brandName">AniVote Awards</span></a>
+  <a class="brand" href="#"><svg><use href="#trophy"/></svg><span id="brandName">AxA Awards</span></a>
   <a class="btn gold sm" id="topVote" href="vote/" hidden>Vote now</a>
 </div></header>
 
@@ -194,7 +192,7 @@ footer .links a:hover{color:var(--gold)}
   <div class="wrap">
     <svg class="laurel" id="laurel" viewBox="0 0 300 120" aria-hidden="true"></svg>
     <div class="kicker" id="kicker">The Community Anime Awards</div>
-    <h1><span class="metal" id="title">AniVote Awards</span></h1>
+    <h1><span class="metal" id="title">AxA Awards</span></h1>
     <p class="tagline" id="tagline"></p>
     <div class="when" id="when"></div>
     <div class="count" id="count" hidden></div>
@@ -203,7 +201,6 @@ footer .links a:hover{color:var(--gold)}
       <a class="btn" id="heroWatch" href="#" target="_blank" rel="noopener" hidden>▶&nbsp; Watch live</a>
       <a class="btn" href="#categories">Explore the awards</a>
     </div>
-    <div class="status" id="status" hidden></div>
   </div>
   <div class="scroll-cue" aria-hidden="true"></div>
 </section>
@@ -213,7 +210,7 @@ footer .links a:hover{color:var(--gold)}
 
 <footer>
   <div class="wrap">
-    <p class="big"><span class="metal" id="footTitle">AniVote Awards</span></p>
+    <p class="big"><span class="metal" id="footTitle">AxA Awards</span></p>
     <a class="btn gold" id="footVote" href="vote/" hidden>Cast your vote</a>
     <div class="links"><a href="vote/">Ballot</a><a href="#categories">Categories</a><a href="../">AniVote polls</a></div>
   </div>
@@ -227,7 +224,7 @@ const NOMINEES_CSV = 'data/nominees.csv';
 const SETTINGS_CSV = 'data/settings.csv';
 const REFRESH_SECONDS = 60; // re-check the sheet so winners appear live during the ceremony
 
-const DEFAULTS = {title:'AniVote Awards', tagline:'', date:'', venue:'', stream_url:'', vote_url:'vote/',
+const DEFAULTS = {title:'AxA Awards', tagline:'', date:'', venue:'', stream_url:'', vote_url:'vote/',
   vote_open:'TRUE', reveal_winners:'FALSE', show_results:'FALSE'};
 
 // Accent colour per category, in order. A category_color column in the sheet overrides it.
@@ -335,10 +332,6 @@ function render(){
   $('#when').textContent = [d && !isNaN(d) ? d.toLocaleString(undefined, {month:'long', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit'}) : 'Date to be announced', S.venue].filter(Boolean).join('  ·  ');
   tick();
 
-  const won = CATS.filter(c => c.noms.some(n => n.winner)).length, named = CATS.filter(c => c.noms.length).length;
-  $('#status').hidden = !CATS.length;
-  $('#status').innerHTML = reveal ? `<b>${won}</b> of ${CATS.length} winners revealed`
-    : `<b>${CATS.length}</b> awards${named < CATS.length ? ` · nominees for ${named} announced` : ' · nominees announced'}`;
 
   $('#catnav').hidden = !CATS.length;
   $('#catlinks').innerHTML = CATS.map(c => `<a href="#${c.id}" style="--c:${c.color}">${esc(c.name)}${reveal && c.noms.some(n => n.winner) ? '<span class="dot"></span>' : ''}</a>`).join('');

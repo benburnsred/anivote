@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#0d0f1a">
-<title>AniVote Awards — Tier List Ballot</title>
+<title>AxA Awards — Ballot</title>
 <style>
 :root{--bg:#0d0f1a;--panel:#161a2b;--panel2:#1d2236;--ink:#eef0ff;--muted:#9aa1c0;--line:#2a3150;--accent:#a99aff;--accent2:#7c5cff;
 --S:#ff5d7a;--A:#ff9f43;--B:#ffd43b;--C:#5ad18a;--D:#4dabf7;--good:#5ad18a;--bad:#ff5d7a}
@@ -14,26 +14,26 @@ button,input{font:inherit;color:inherit}
 .wrap{max-width:1100px;margin:auto;padding:20px 16px 80px}
 header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .brand{font-weight:900;font-size:20px;letter-spacing:.2px;color:inherit;text-decoration:none}.brand span{color:var(--accent)}
-.tabs{display:flex;gap:4px;background:var(--panel);padding:4px;border-radius:12px;border:1px solid var(--line)}
-.tabs button{border:0;background:transparent;padding:8px 14px;border-radius:9px;cursor:pointer;color:var(--muted);font-weight:700}
+.tabs{display:flex;gap:4px;background:var(--panel);padding:4px;border-radius:0;border:1px solid var(--line)}
+.tabs button{border:0;background:transparent;padding:8px 14px;border-radius:0;cursor:pointer;color:var(--muted);font-weight:700}
 .tabs button.on{background:var(--accent2);color:#fff}
 .hero{margin:22px 0 16px}
 .eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.14em;font-weight:900;color:var(--accent)}
 h1{font-size:30px;line-height:1.1;margin:6px 0 8px}
 .hero p{color:var(--muted);margin:0;max-width:720px}
-.mode{display:inline-block;margin-top:10px;font-size:12px;padding:4px 10px;border-radius:99px;background:var(--panel2);border:1px solid var(--line);color:var(--muted)}
+.mode{display:inline-block;margin-top:10px;font-size:12px;padding:4px 10px;border-radius:0;background:var(--panel2);border:1px solid var(--line);color:var(--muted)}
 .mode b{color:var(--B)}
 .cats{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
-.cats button{border:1px solid var(--line);background:var(--panel);padding:7px 12px;border-radius:99px;cursor:pointer;font-weight:700;color:var(--muted)}
+.cats button{border:1px solid var(--line);background:var(--panel);padding:7px 12px;border-radius:0;cursor:pointer;font-weight:700;color:var(--muted)}
 .cats button.on{border-color:var(--accent);color:#fff}
 .cats button .done{color:var(--good);margin-left:4px}
-.voter{display:flex;gap:10px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:14px}
+.voter{display:flex;gap:10px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);border-radius:0;padding:12px;margin-bottom:14px}
 .voter label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted);font-weight:700;flex:1 1 200px}
-.voter input{background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:9px 11px;outline:none}
+.voter input{background:var(--bg);border:1px solid var(--line);border-radius:0;padding:9px 11px;outline:none}
 .voter input:focus{border-color:var(--accent)}
 .hint{font-size:13px;color:var(--muted);margin:0 0 8px;min-height:20px}
 .hint b{color:#fff}
-.board{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--panel)}
+.board{border:1px solid var(--line);border-radius:0;overflow:hidden;background:var(--panel)}
 .tier{display:flex;min-height:96px;border-top:1px solid var(--line);transition:background .15s}
 .tier:first-child{border-top:0}
 .tier.over,.tier.target{background:#232a44}
@@ -41,10 +41,10 @@ h1{font-size:30px;line-height:1.1;margin:6px 0 8px}
 .label{width:78px;flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:900;color:#141625;gap:2px}
 .label .t{font-size:28px;line-height:1}.label .p{font-size:11px;font-weight:800;opacity:.75}.label .c{font-size:10px;font-weight:800;opacity:.75}
 .slots{flex:1;display:flex;flex-wrap:wrap;gap:8px;padding:8px;align-content:flex-start;cursor:pointer}
-.pool{margin-top:16px;background:var(--panel);border:1px dashed var(--line);border-radius:14px}
+.pool{margin-top:16px;background:var(--panel);border:1px dashed var(--line);border-radius:0}
 .pool h3{margin:0;padding:10px 12px 0;font-size:13px;color:var(--muted)}
 .pool .slots{min-height:110px}
-.card{width:150px;height:80px;border-radius:10px;position:relative;overflow:hidden;cursor:grab;user-select:none;-webkit-user-select:none;background:linear-gradient(135deg,#3b2f7a,#1f2a4d);border:2px solid transparent;flex:none;box-shadow:0 4px 14px rgba(0,0,0,.35);transition:transform .12s,border-color .12s}
+.card{width:150px;height:80px;border-radius:0;position:relative;overflow:hidden;cursor:grab;user-select:none;-webkit-user-select:none;background:linear-gradient(135deg,#3b2f7a,#1f2a4d);border:2px solid transparent;flex:none;box-shadow:0 4px 14px rgba(0,0,0,.35);transition:transform .12s,border-color .12s}
 .card:hover{transform:translateY(-2px)}
 .card.sel{border-color:#fff;transform:translateY(-2px) scale(1.03)}
 .card.dragging{opacity:.4}
@@ -55,28 +55,28 @@ h1{font-size:30px;line-height:1.1;margin:6px 0 8px}
 .card .play{position:absolute;top:5px;right:5px;width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.6);display:grid;place-items:center;font-size:10px;text-decoration:none;color:#fff;border:1px solid rgba(255,255,255,.25)}
 .card .play:hover{background:var(--accent2)}
 .actions{display:flex;gap:10px;justify-content:space-between;align-items:center;flex-wrap:wrap;margin-top:16px}
-.btn{border:0;border-radius:10px;padding:11px 18px;font-weight:800;cursor:pointer;background:var(--panel2);border:1px solid var(--line)}
+.btn{border:0;border-radius:0;padding:11px 18px;font-weight:800;cursor:pointer;background:var(--panel2);border:1px solid var(--line)}
 .btn.primary{background:var(--accent2);border-color:var(--accent2);color:#fff}
 .btn.primary:disabled{opacity:.45;cursor:not-allowed}
 .btn.sm{padding:7px 12px;font-size:12px}
 .score{color:var(--muted);font-size:13px}.score b{color:#fff}
-.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(120px);background:#fff;color:#141625;padding:10px 16px;border-radius:10px;font-weight:750;transition:transform .25s;z-index:50;max-width:calc(100% - 32px);text-align:center}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(120px);background:#fff;color:#141625;padding:10px 16px;border-radius:0;font-weight:750;transition:transform .25s;z-index:50;max-width:calc(100% - 32px);text-align:center}
 .toast.show{transform:translateX(-50%) translateY(0)}
 .shake{animation:shake .3s}
 @keyframes shake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
-.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:0;padding:16px}
 .done-box{text-align:center;padding:28px 16px}
 .done-box h2{margin:0 0 6px}
 .done-box p{color:var(--muted);margin:0 0 16px}
-canvas{max-width:100%;border-radius:12px;margin:8px auto 14px;display:block}
+canvas{max-width:100%;border-radius:0;margin:8px auto 14px;display:block}
 .rank{display:grid;grid-template-columns:34px 1fr auto;gap:12px;align-items:center;padding:10px 4px;border-top:1px solid var(--line)}
 .rank:first-of-type{border-top:0}
 .rank .n{font-size:20px;font-weight:900;text-align:center;color:var(--muted)}
 .rank:nth-of-type(1) .n{color:var(--B)}.rank:nth-of-type(2) .n{color:#d0d4e4}.rank:nth-of-type(3) .n{color:var(--A)}
 .rank .name{font-weight:800}.rank .sub{font-size:12px;color:var(--muted)}
-.bar{height:6px;border-radius:9px;background:var(--panel2);margin-top:6px;overflow:hidden}.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--accent2),var(--S))}
+.bar{height:6px;border-radius:0;background:var(--panel2);margin-top:6px;overflow:hidden}.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--accent2),var(--S))}
 .pts{text-align:right;font-weight:900;font-size:18px}.pts small{display:block;font-size:11px;color:var(--muted);font-weight:700}
-.dist{display:flex;gap:3px;margin-top:4px}.dist span{font-size:10px;font-weight:800;padding:1px 5px;border-radius:4px;color:#141625}
+.dist{display:flex;gap:3px;margin-top:4px}.dist span{font-size:10px;font-weight:800;padding:1px 5px;border-radius:0;color:#141625}
 .rhead{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
 .rhead h2{margin:0;font-size:18px}
 .empty{color:var(--muted);text-align:center;padding:30px 10px}
@@ -88,7 +88,7 @@ footer a{color:var(--accent)}
 <body>
 <div class="wrap">
   <header>
-    <a class="brand" href="../">Ani<span>Vote</span> Awards</a>
+    <a class="brand" href="../">Ax<span>A</span> Awards</a>
     <nav class="tabs"><button data-view="vote" class="on">Vote</button><button data-view="results">Results</button></nav>
   </header>
 
@@ -329,7 +329,7 @@ function drawShare(name){
   const css = v => getComputedStyle(document.documentElement).getPropertyValue(v.slice(4, -1)).trim();
   const g = x.createLinearGradient(0, 0, W, H); g.addColorStop(0, '#151c2d'); g.addColorStop(.55, '#2c2452'); g.addColorStop(1, '#6d55df');
   x.fillStyle = g; x.fillRect(0, 0, W, H);
-  x.fillStyle = '#c7bcff'; x.font = '900 26px system-ui,sans-serif'; x.fillText('ANIVOTE AWARDS 2026', 60, 80);
+  x.fillStyle = '#c7bcff'; x.font = '900 26px system-ui,sans-serif'; x.fillText('AXA AWARDS 2026', 60, 80);
   x.fillStyle = '#fff'; x.font = '900 52px system-ui,sans-serif'; x.fillText(`${name}'s ${c.title.replace(' of the Year', '')}s`, 60, 145);
   const top = 190, rowH = (H - top - 70) / TIERS.length;
   TIERS.forEach((t, i) => {

@@ -333,6 +333,7 @@ function build(rows){
     if (r.category_description && !c.desc) c.desc = r.category_description;
     if (r.category_color && !c.color) c.color = safeColor(r.category_color);
     if (r.category_image && !c.trophy) c.trophy = safeUrl(r.category_image);
+    if (r.category_type === 'special') c.special = true;
     if (r.nominee) c.noms.push({name:r.nominee, sub:r.subtitle, image:safeUrl(r.image), search:r.image_search, link:safeUrl(r.link), winner:yes(r.winner), result:r.result, avatar:/avatar/i.test(r.image_style || '')});
   }
   cats.forEach((c, i) => c.color ||= PALETTE[i % PALETTE.length]);
@@ -415,7 +416,8 @@ function render(){
 
   $('#categories').innerHTML = CATS.length ? CATS.map((c, i) => {
     const hasWin = reveal && c.noms.some(n => n.winner);
-    const state = hasWin ? '' : `<div class="cat-state">${c.noms.length ? `${c.noms.length} nominees · winner revealed at the ceremony` : 'Nominees coming soon'}</div>`;
+    const state = hasWin ? (c.special ? '<div class="cat-state">Special award</div>' : '')
+      : `<div class="cat-state">${c.special ? 'Special award · announced at the ceremony' : c.noms.length ? `${c.noms.length} nominees · winner revealed at the ceremony` : 'Nominees coming soon'}</div>`;
     const body = hasWin ? stageHTML(c, showRes)
       : `<div class="grid">${c.noms.length ? c.noms.map(capHTML).join('')
         : Array.from({length:5}, () => '<div class="cap tba rv"><div class="mono">?</div><div class="info"><div class="name">To be announced</div></div></div>').join('')}</div>`;

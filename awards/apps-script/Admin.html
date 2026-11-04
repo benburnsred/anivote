@@ -1,0 +1,235 @@
+<!doctype html>
+<html>
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<style>
+:root{--bg:#f6f6f8;--card:#fff;--ink:#1d1b22;--muted:#6b6878;--line:#e3e1e8;--accent:#a8761f;--bad:#b3261e;--good:#1e7b3a}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:var(--bg)}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 18px;background:#16141c;color:#fff}
+header h1{margin:0;font-size:17px}
+header .me{color:#b9b5c6;font-size:12px}
+nav{display:flex;gap:2px;padding:0 18px;background:#fff;border-bottom:1px solid var(--line);overflow-x:auto}
+nav button{border:0;background:none;padding:12px 14px;cursor:pointer;color:var(--muted);font:inherit;font-weight:600;border-bottom:2px solid transparent}
+nav button.on{color:var(--ink);border-color:var(--accent)}
+main{max-width:1000px;margin:0 auto;padding:18px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;margin-bottom:12px}
+.card > .head{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer}
+.card > .body{border-top:1px solid var(--line);padding:14px}
+.title{font-weight:700;flex:1;min-width:0}
+.meta{color:var(--muted);font-size:12px}
+.tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;background:#eee;color:#444;margin-left:6px}
+.tag.special{background:#fbefd5;color:#8a5a00}
+.tag.closed{background:#fde4e1;color:var(--bad)}
+button,.btn{font:inherit;border:1px solid var(--line);background:#fff;border-radius:6px;padding:6px 12px;cursor:pointer}
+button:hover{border-color:#bbb}
+button.primary{background:var(--ink);color:#fff;border-color:var(--ink)}
+button.danger{color:var(--bad)}
+button.icon{padding:4px 8px}
+button:disabled{opacity:.5;cursor:default}
+label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:10px}
+input,select,textarea{display:block;width:100%;margin-top:4px;font:inherit;padding:7px 9px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink)}
+textarea{min-height:56px;resize:vertical}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0 14px}
+table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+th{font-size:12px;color:var(--muted);font-weight:600}
+td.num{text-align:right;font-variant-numeric:tabular-nums}
+tr.tie td{background:#fff8e6}
+.thumb{width:34px;height:44px;object-fit:cover;border-radius:4px;background:#eee;display:block}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.spacer{flex:1}
+.note{color:var(--muted);font-size:12px;margin:6px 0 12px}
+.hint{background:#fff8e6;border:1px solid #f1dfb2;border-radius:6px;padding:8px 10px;font-size:13px;margin-bottom:12px}
+#toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#16141c;color:#fff;padding:9px 14px;border-radius:6px;display:none;max-width:90%}
+#toast.err{background:var(--bad)}
+#loading{padding:40px;text-align:center;color:var(--muted)}
+h2{font-size:15px;margin:18px 0 10px}
+</style>
+</head>
+<body>
+<header><h1>Awards Committee</h1><div class="row"><span class="me" id="me"></span><button class="primary" id="publish">Publish to site</button></div></header>
+<nav id="tabs"><button data-tab="categories" class="on">Categories</button><button data-tab="results">Results</button><button data-tab="settings">Settings</button><button data-tab="activity">Activity</button></nav>
+<main id="main"><div id="loading">Loading…</div></main>
+<div id="toast"></div>
+
+<script>
+let STATE = null, TAB = 'categories', OPEN = null, EDIT_NOM = null;
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const TIER_HINT = 'Tier list: voters drag nominees into S/A/B/C/D (5 to 1 points, S holds 1, A 2, B 3).';
+
+function toast(msg, err){ const t = $('#toast'); t.textContent = msg; t.className = err ? 'err' : ''; t.style.display = 'block'; clearTimeout(t._h); t._h = setTimeout(() => t.style.display = 'none', err ? 6000 : 2500); }
+
+// Calls a server function and re-renders with the returned state.
+function call(fn, ...args){
+  document.body.style.cursor = 'progress';
+  return new Promise(resolve => google.script.run
+    .withSuccessHandler(s => { document.body.style.cursor = ''; STATE = s; render(); resolve(s); })
+    .withFailureHandler(e => { document.body.style.cursor = ''; toast(e.message || String(e), true); resolve(null); })[fn](...args));
+}
+
+function open(c){
+  if (c.type === 'special') return true;
+  const now = new Date();
+  return !(c.opens && now < new Date(c.opens)) && !(c.closes && now > new Date(c.closes));
+}
+const nomsOf = id => STATE.nominees.filter(n => n.category_id === id);
+const methodLabel = c => c.type === 'special' ? 'Special award: committee picks the winner' : (STATE.methods[c.method] || STATE.methods.tier).replace('N', c.max_picks || 3);
+// ISO time -> value for a datetime-local input, in the viewer's own time zone.
+const local = v => { const d = new Date(v); if (!v || isNaN(d)) return ''; d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 16); };
+
+/* ===== Categories ===== */
+function categoryForm(c){
+  c = c || {type:'vote', method:'tier'};
+  const methods = Object.entries(STATE.methods).map(([k, v]) => `<option value="${k}"${c.method === k ? ' selected' : ''}>${esc(v)}</option>`).join('');
+  return `<form class="catform" data-id="${esc(c.id || '')}">
+    <div class="grid">
+      <label>Name<input name="name" value="${esc(c.name)}" required placeholder="e.g. Anime of the Year 2026"></label>
+      <label>Type<select name="type"><option value="vote"${c.type !== 'special' ? ' selected' : ''}>Public vote</option><option value="special"${c.type === 'special' ? ' selected' : ''}>Special award / mention (no voting)</option></select></label>
+      <label class="vote-only">Voting method<select name="method">${methods}</select></label>
+      <label class="vote-only picks">How many picks / ranks (N)<input name="max_picks" type="number" min="1" max="20" value="${esc(c.max_picks || '')}" placeholder="3"></label>
+      <label class="vote-only">Voting opens (optional)<input name="opens" type="datetime-local" value="${esc(local(c.opens))}"></label>
+      <label class="vote-only">Voting closes (optional)<input name="closes" type="datetime-local" value="${esc(local(c.closes))}"></label>
+    </div>
+    <label>Description (optional)<textarea name="description">${esc(c.description)}</textarea></label>
+    <div class="row"><button class="primary">${c.id ? 'Save category' : 'Add category'}</button>${c.id ? '' : '<button type="button" data-cancel>Cancel</button>'}</div>
+  </form>`;
+}
+
+function nomineeForm(catId, n){
+  n = n || {};
+  return `<form class="nomform" data-cat="${esc(catId)}" data-id="${esc(n.id || '')}">
+    <div class="grid">
+      <label>Nominee<input name="name" value="${esc(n.name)}" required></label>
+      <label>Subtitle (artist, studio…)<input name="subtitle" value="${esc(n.subtitle)}"></label>
+      <label>Image link (optional)<input name="image" value="${esc(n.image)}" placeholder="https://…"></label>
+      <label>Anime title for automatic poster (optional)<input name="image_search" value="${esc(n.image_search)}"></label>
+      <label>Watch / listen link (optional)<input name="link" value="${esc(n.link)}" placeholder="https://youtube.com/…"></label>
+    </div>
+    <div class="row"><button class="primary">${n.id ? 'Save nominee' : 'Add nominee'}</button>${n.id ? '<button type="button" data-cancel-nom>Cancel</button>' : ''}</div>
+  </form>`;
+}
+
+function renderCategories(){
+  const cats = STATE.categories;
+  const list = cats.map((c, i) => {
+    const noms = nomsOf(c.id), winners = noms.filter(n => n.winner === 'TRUE');
+    const status = c.type === 'special' ? '<span class="tag special">Special</span>' : open(c) ? '' : '<span class="tag closed">Voting closed</span>';
+    const body = OPEN !== c.id ? '' : `<div class="body">
+      ${categoryForm(c)}
+      <h2>Nominees (${noms.length})</h2>
+      ${c.type === 'special' ? '<p class="note">Tick the winner(s). Special awards don\'t appear on the ballot.</p>' : ''}
+      ${noms.length ? `<table><tr><th></th><th>Nominee</th><th>Subtitle</th>${c.type === 'special' ? '<th>Winner</th>' : ''}<th></th></tr>
+        ${noms.map(n => EDIT_NOM === n.id ? `<tr><td colspan="5">${nomineeForm(c.id, n)}</td></tr>` : `<tr>
+          <td>${n.image ? `<img class="thumb" src="${esc(n.image)}" alt="">` : '<span class="thumb"></span>'}</td>
+          <td>${esc(n.name)}</td><td class="meta">${esc(n.subtitle)}</td>
+          ${c.type === 'special' ? `<td><input type="checkbox" class="win" data-cat="${c.id}" data-id="${n.id}"${n.winner === 'TRUE' ? ' checked' : ''} style="width:auto"></td>` : ''}
+          <td class="num"><button class="icon" data-editnom="${n.id}">Edit</button> <button class="icon danger" data-delnom="${n.id}">Delete</button></td></tr>`).join('')}</table>` : '<p class="note">No nominees yet.</p>'}
+      <h2>Add a nominee</h2>${nomineeForm(c.id)}
+      <div class="row" style="margin-top:14px"><span class="spacer"></span><button class="danger" data-delcat="${c.id}">Delete category</button></div>
+    </div>`;
+    return `<div class="card"><div class="head" data-open="${c.id}">
+      <div class="row"><button class="icon" data-move="${c.id}" data-dir="-1"${i ? '' : ' disabled'} title="Move up">↑</button><button class="icon" data-move="${c.id}" data-dir="1"${i < cats.length - 1 ? '' : ' disabled'} title="Move down">↓</button></div>
+      <div class="title">${esc(c.name)}${status}<div class="meta">${esc(methodLabel(c))} · ${noms.length} nominees${c.type === 'special' ? '' : ` · ${c.ballots} ballots`}${winners.length ? ` · Winner: ${esc(winners.map(w => w.name).join(', '))}` : ''}</div></div>
+      <span class="meta">${OPEN === c.id ? '▲' : '▼'}</span></div>${body}</div>`;
+  }).join('');
+  return `<div class="row" style="margin-bottom:12px"><span class="note" style="margin:0">Changes are saved right away but only appear on the public site after <b>Publish to site</b>.</span><span class="spacer"></span><button class="primary" id="addcat">Add category</button></div>
+    <div id="newcat"></div>${list || '<p class="note">No categories yet. Add the first one.</p>'}`;
+}
+
+/* ===== Results ===== */
+function renderResults(){
+  const cats = STATE.categories.filter(c => c.type !== 'special');
+  if (!cats.length) return '<p class="note">No public-vote categories yet.</p>';
+  return '<p class="note">Only the committee sees this. Ranked by points; ties are broken by first-place picks (S tier, rank 1 or a pick). Tick the winner(s) and publish.</p>' + cats.map(c => {
+    const r = STATE.results[c.id] || {};
+    const rows = nomsOf(c.id).map(n => Object.assign({n}, r[n.id] || {points:0, voters:0, top:0}))
+      .sort((a, b) => b.points - a.points || b.top - a.top);
+    const tied = rows.length > 1 && rows[0].points > 0 && rows[0].points === rows[1].points && rows[0].top === rows[1].top;
+    return `<div class="card"><div class="head"><div class="title">${esc(c.name)}<div class="meta">${esc(methodLabel(c))} · ${c.ballots} ballots${tied ? ' · <b style="color:var(--bad)">Tie for first: committee decides</b>' : ''}</div></div></div>
+      <div class="body"><table><tr><th>#</th><th>Nominee</th><th style="text-align:right">Points</th><th style="text-align:right">Voters</th><th style="text-align:right">1st picks</th><th>Winner</th></tr>
+      ${rows.map((x, i) => `<tr class="${tied && x.points === rows[0].points && x.top === rows[0].top ? 'tie' : ''}"><td>${i + 1}</td><td>${esc(x.n.name)}</td>
+        <td class="num">${x.points}</td><td class="num">${x.voters}</td><td class="num">${x.top}</td>
+        <td><input type="checkbox" class="win" data-cat="${c.id}" data-id="${x.n.id}"${x.n.winner === 'TRUE' ? ' checked' : ''} style="width:auto"></td></tr>`).join('')}</table></div></div>`;
+  }).join('');
+}
+
+/* ===== Settings ===== */
+const SETTINGS = [['title', 'Event title', 'text'], ['tagline', 'Tagline', 'text'], ['date', 'Ceremony date and time', 'datetime-local'],
+  ['venue', 'Venue', 'text'], ['stream_url', 'Livestream link', 'text'], ['vote_open', 'Voting open', 'bool'],
+  ['reveal_winners', 'Reveal winners on the site', 'bool'], ['show_results', 'Show points on the site', 'bool'],
+  ['facebook_url', 'Facebook link', 'text'], ['youtube_url', 'YouTube link', 'text'], ['discord_url', 'Discord link', 'text']];
+function renderSettings(){
+  const s = STATE.settings;
+  return `<form id="settings" class="card"><div class="body" style="border:0"><div class="grid">${SETTINGS.map(([k, label, type]) => type === 'bool'
+    ? `<label>${label}<select name="${k}"><option value="TRUE"${s[k] === 'TRUE' ? ' selected' : ''}>Yes</option><option value="FALSE"${s[k] !== 'TRUE' ? ' selected' : ''}>No</option></select></label>`
+    : `<label>${label}<input name="${k}" type="${type}" value="${esc(type === 'datetime-local' ? local(s[k]) : s[k])}"></label>`).join('')}</div>
+    <p class="note">Settings take effect on the site right away (no publish needed).</p><button class="primary">Save settings</button></div></form>`;
+}
+
+function renderActivity(){
+  return `<div class="card"><div class="body" style="border:0"><table><tr><th>When</th><th>Who</th><th>What</th></tr>${STATE.log.map(l =>
+    `<tr><td class="meta">${esc(new Date(l.Timestamp).toLocaleString())}</td><td>${esc(l.Email)}</td><td>${esc(l.Action)} <span class="meta">${esc(l.Details)}</span></td></tr>`).join('') || '<tr><td colspan="3" class="note">Nothing yet.</td></tr>'}</table></div></div>`;
+}
+
+function render(){
+  $('#me').textContent = STATE.email;
+  document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === TAB));
+  $('#main').innerHTML = {categories:renderCategories, results:renderResults, settings:renderSettings, activity:renderActivity}[TAB]();
+  document.querySelectorAll('.catform').forEach(syncForm);
+}
+
+// Show only the fields that apply to the chosen type and method.
+function syncForm(f){
+  const special = f.type.value === 'special', m = f.method.value;
+  f.querySelectorAll('.vote-only').forEach(el => el.style.display = special ? 'none' : '');
+  f.querySelector('.picks').style.display = special || !(m === 'multi' || m === 'rank') ? 'none' : '';
+}
+
+const data = f => Object.fromEntries(new FormData(f).entries());
+const iso = v => v ? new Date(v).toISOString() : '';
+
+document.addEventListener('change', e => {
+  const f = e.target.closest('.catform'); if (f) syncForm(f);
+  if (e.target.classList.contains('win')){
+    const ids = [...document.querySelectorAll(`.win[data-cat="${e.target.dataset.cat}"]`)].filter(x => x.checked).map(x => x.dataset.id);
+    call('adminSetWinners', e.target.dataset.cat, ids).then(s => s && toast('Winners updated. Publish to show them on the site.'));
+  }
+});
+
+document.addEventListener('submit', e => {
+  e.preventDefault();
+  const f = e.target;
+  if (f.classList.contains('catform')){
+    const d = data(f); d.id = f.dataset.id; d.opens = iso(d.opens); d.closes = iso(d.closes);
+    call('adminSaveCategory', d).then(s => { if (s){ toast('Category saved'); if (!d.id){ OPEN = s.categories[s.categories.length - 1].id; render(); } } });
+  } else if (f.classList.contains('nomform')){
+    const d = data(f); d.id = f.dataset.id; d.category_id = f.dataset.cat;
+    call('adminSaveNominee', d).then(s => { if (s){ EDIT_NOM = null; render(); toast('Nominee saved'); } });
+  } else if (f.id === 'settings'){
+    const d = data(f); d.date = iso(d.date);
+    call('adminSaveSettings', d).then(s => s && toast('Settings saved'));
+  }
+});
+
+document.addEventListener('click', e => {
+  const t = e.target.closest('button,[data-open]'); if (!t) return;
+  if (t.dataset.tab){ TAB = t.dataset.tab; render(); return; }
+  if (t.id === 'addcat'){ $('#newcat').innerHTML = `<div class="card"><div class="body" style="border:0">${categoryForm()}</div></div>`; syncForm($('#newcat form')); return; }
+  if ('cancel' in t.dataset){ $('#newcat').innerHTML = ''; return; }
+  if ('cancelNom' in t.dataset){ EDIT_NOM = null; render(); return; }
+  if (t.dataset.move){ e.stopPropagation(); call('adminMoveCategory', t.dataset.move, Number(t.dataset.dir)); return; }
+  if (t.dataset.editnom){ EDIT_NOM = t.dataset.editnom; render(); return; }
+  if (t.dataset.delnom){ if (confirm('Delete this nominee?')) call('adminDeleteNominee', t.dataset.delnom); return; }
+  if (t.dataset.delcat){ if (confirm('Delete this category and all its nominees?')){ OPEN = null; call('adminDeleteCategory', t.dataset.delcat); } return; }
+  if (t.id === 'publish'){ if (confirm('Publish categories, nominees and winners to the public site?')) call('adminPublish').then(s => s && toast('Published. The site updates within a few minutes.')); return; }
+  if (t.dataset.open && !e.target.closest('button')){ OPEN = OPEN === t.dataset.open ? null : t.dataset.open; EDIT_NOM = null; render(); }
+});
+
+google.script.run.withSuccessHandler(s => { STATE = s; render(); })
+  .withFailureHandler(e => { $('#main').innerHTML = `<div class="hint">${esc(e.message || e)}</div>`; }).adminState();
+</script>
+</body>
+</html>

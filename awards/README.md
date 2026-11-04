@@ -152,3 +152,34 @@ The Results tab is hidden (`SHOW_RESULTS_TAB = false`) until it's decided how re
 ## Sample nominees
 
 These are popular 2026 anime songs from the Billboard JAPAN Hot Animation mid-year chart and the Anime Corner and Anime!Anime! seasonal fan polls. Treat them as placeholder data. "IRIS OUT" is a movie theme rather than a TV opening.
+
+# Committee dashboard (2026 onwards)
+
+A simple admin page for the committee, served by the same Apps Script (`apps-script/Code.gs` + `apps-script/Admin.html`). The committee can:
+
+- **Create categories:** name, description, and type:
+  - **Public vote:** appears on the ballot.
+  - **Special award / mention:** no voting. The committee ticks the winner.
+- **Choose a voting method per category:** tier list (S=5 … D=1), pick one, pick up to N, or rank top N (1st = N points … Nth = 1). Each category can have optional voting open/close times.
+- **Add, edit and delete nominees:** with picture, subtitle, anime title for an automatic poster, and a watch/listen link. Categories and nominees that already have votes can't be deleted.
+- **Reorder categories.**
+- **See live results (committee only):** points, voters and first-place picks. Ties are flagged, and the committee ticks the winner(s).
+- **Edit event settings:** title, date, voting open, reveal winners, social links.
+- **Publish to site:** copies categories, nominees and winners to the `Site` tab, which the public awards page and ballot read.
+- **Activity log:** who changed what.
+
+## Setup (once per edition)
+
+1. Create a new Google Sheet for the edition. Open **Extensions → Apps Script**, then:
+   - paste `Code.gs`
+   - add an HTML file named `Admin` with the contents of `Admin.html`
+   - run `setup`
+2. In the `Committee` tab, list each member's Google email. Share the Sheet with them as **Editor**.
+3. Make two deployments: **Deploy → New deployment → Web app**, once with each of these settings:
+   - **Public:** Execute as *Me*, access *Anyone*. Paste this URL into `APPS_SCRIPT_URL` in `vote/index.html`.
+   - **Committee:** Execute as *User accessing the web app*, access *Anyone with Google account*. The dashboard is this URL + `?page=admin`. Bookmark it for the committee.
+4. Publish the data to the site: **File → Share → Publish to web**, once for the `Site` tab and once for the `Settings` tab, choosing CSV each time. Put the two links in:
+   - `NOMINEES_CSV` / `SETTINGS_CSV` at the top of `2026/index.html`
+   - the same two variables in `vote/index.html`
+
+After that, everything is done from the dashboard. Google's published CSV can take a few minutes to refresh after **Publish to site**.

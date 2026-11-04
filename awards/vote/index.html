@@ -74,6 +74,9 @@ h1{font:900 clamp(28px,5vw,52px)/1.05 var(--serif);text-transform:uppercase;lett
 .card .meta{font-size:10.5px;color:#bab5c6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .card .play{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;background:rgba(6,6,11,.7);display:grid;place-items:center;font-size:9px;text-decoration:none;color:var(--gold);border:1px solid rgba(233,196,106,.45)}
 .card .play:hover{background:rgba(233,196,106,.2)}
+.card .badge{position:absolute;top:6px;left:6px;min-width:26px;height:26px;padding:0 7px;border-radius:13px;background:var(--metal);color:#16120a;font:900 13px/26px var(--serif);text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.6)}
+.picking .card{cursor:pointer}
+.picking .card.picked{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold),0 0 22px -4px rgba(233,196,106,.5)}
 .actions{display:flex;gap:10px;justify-content:space-between;align-items:center;flex-wrap:wrap;margin-top:20px}
 .btn{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line2);background:rgba(255,255,255,.04);color:var(--ink);padding:13px 22px;font:700 13px/1 var(--sans);letter-spacing:.08em;text-transform:uppercase;cursor:pointer;white-space:nowrap;transition:transform .2s var(--ease),background .2s,border-color .2s}
 .btn:hover{transform:translateY(-1px);border-color:rgba(255,255,255,.3);background:rgba(255,255,255,.08)}
@@ -129,7 +132,7 @@ footer a{color:var(--muted)}
   <div class="cats" id="cats"></div>
 
   <main id="voteView">
-    <div class="panel soon" id="soon" hidden><h2>Nominees coming soon</h2><p>The nominees for this award haven't been announced yet. Check back soon, or vote in another category.</p></div>
+    <div class="panel soon" id="soon" hidden><h2 id="soonTitle">Nominees coming soon</h2><p id="soonText">The nominees for this award haven't been announced yet. Check back soon, or vote in another category.</p></div>
     <div id="ballot">
     <div class="voter">
       <label>Your name<input id="voterName" placeholder="e.g. Ben" maxlength="40" autocomplete="nickname"></label>
@@ -205,7 +208,12 @@ const TIERS = [
   {id:'C', points:2, cap:0, color:'var(--C)'},
   {id:'D', points:1, cap:0, color:'var(--D)'}
 ];
-const RULES = 'Drag or tap each nominee into a tier: S = 5 pts, A = 4, B = 3, C = 2, D = 1. Leave any you don\'t know in the pool — they score 0.';
+const RULES = {
+  tier: () => 'Drag or tap each nominee into a tier: S = 5 pts, A = 4, B = 3, C = 2, D = 1. Leave any you don\'t know in the pool — they score 0.',
+  single: () => 'Tap the one nominee you want to win.',
+  multi: n => `Tap up to ${n} nominees you'd like to win. Each pick counts the same.`,
+  rank: n => `Tap nominees in order of preference, up to ${n}: your 1st pick gets ${n} points, your last gets 1.`
+};
 
 let CATEGORIES = [], EDITION = 'Anime X Angas Awards', SETTINGS = {};
 
@@ -250,6 +258,13 @@ async function getCSV(u){
   return parseCSV(await res.text());
 }
 
+// Voting is closed for the whole event (vote_open setting) or outside this category's window.
+function isClosed(c){
+  const now = new Date();
+  return SETTINGS.vote_open === 'FALSE' || (c.opens && now < new Date(c.opens)) || (c.closes && now > new Date(c.closes));
+}
+const picksMax = c => c.method === 'single' ? 1 : Math.min(c.max, c.nominees.length);
+
 async function loadData(){
   const [rows, settings] = await Promise.all([getCSV(NOMINEES_CSV), getCSV(SETTINGS_CSV).catch(() => [])]);
   settings.forEach(r => { if (r.key) SETTINGS[r.key.trim().toLowerCase()] = r.value; });
@@ -258,10 +273,13 @@ async function loadData(){
   const byId = {};
   for (const r of rows){
     if (!r.category) continue;
-    const id = slug(r.category);
-    const c = byId[id] ||= (CATEGORIES.push({id, title:r.category, blurb:'', nominees:[]}), CATEGORIES[CATEGORIES.length - 1]);
+    if (r.category_type === 'special') continue; // special awards are decided by the committee, not on the ballot
+    // Published data carries stable ids; the bundled CSV falls back to names (must match slug() in Code.gs).
+    const id = r.category_id || slug(r.category);
+    const c = byId[id] ||= (CATEGORIES.push({id, title:r.category, blurb:'', nominees:[], method:RULES[r.method] ? r.method : 'tier',
+      max:parseInt(r.max_picks, 10) || 3, opens:r.opens, closes:r.closes}), CATEGORIES[CATEGORIES.length - 1]);
     if (r.category_description && !c.blurb) c.blurb = r.category_description;
-    if (r.nominee) c.nominees.push({id:slug(r.nominee), name:r.nominee, sub:r.subtitle, image:safeUrl(r.image), q:r.image_search, link:safeUrl(r.link)});
+    if (r.nominee) c.nominees.push({id:r.nominee_id || slug(r.nominee), name:r.nominee, sub:r.subtitle, image:safeUrl(r.image), q:r.image_search, link:safeUrl(r.link)});
   }
 }
 
@@ -286,12 +304,12 @@ const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>'
 function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 2200); }
 
 /* ===== Rendering ===== */
-function cardHTML(n){
+function cardHTML(n, badge){
   const u = n.image || covers[n.q];
   const img = u ? `<div class="img" style="background-image:url('${esc(u)}')"></div>` : '';
   const meta = String(n.sub || '').split(' · ').filter(Boolean).slice(0, 2);
-  return `<div class="card${selected === n.id ? ' sel' : ''}" draggable="true" data-id="${n.id}" title="${esc(n.name)}${n.sub ? ' — ' + esc(n.sub) : ''}">
-    ${img}<div class="txt"><div class="song">${esc(n.name)}</div>${meta.map(m => `<div class="meta">${esc(m)}</div>`).join('')}</div>
+  return `<div class="card${selected === n.id ? ' sel' : ''}${badge ? ' picked' : ''}" draggable="${cat().method === 'tier'}" data-id="${n.id}" title="${esc(n.name)}${n.sub ? ' — ' + esc(n.sub) : ''}">
+    ${img}${badge ? `<span class="badge">${badge}</span>` : ''}<div class="txt"><div class="song">${esc(n.name)}</div>${meta.map(m => `<div class="meta">${esc(m)}</div>`).join('')}</div>
     ${n.link ? `<a class="play" href="${esc(n.link)}" target="_blank" rel="noopener" title="Watch / listen">▶</a>` : ''}</div>`;
 }
 
@@ -299,9 +317,14 @@ function render(){
   if (!CATEGORIES.length) return;
   const c = cat(), d = draft();
   $('#catTitle').textContent = c.title;
-  $('#catBlurb').textContent = [c.blurb, c.nominees.length ? RULES : ''].filter(Boolean).join(' ');
+  const closed = c.nominees.length && isClosed(c), tier = c.method === 'tier';
+  $('#catBlurb').textContent = [c.blurb, c.nominees.length && !closed ? RULES[c.method](picksMax(c)) : ''].filter(Boolean).join(' ');
   $('#eyebrow').textContent = 'Official ballot · ' + (EDITION.match(/\d{4}/) || [''])[0];
-  $('#soon').hidden = !!c.nominees.length; $('#ballot').hidden = !c.nominees.length;
+  $('#soon').hidden = !!c.nominees.length && !closed; $('#ballot').hidden = !c.nominees.length || closed;
+  $('#soonTitle').textContent = closed ? 'Voting is closed' : 'Nominees coming soon';
+  $('#soonText').textContent = closed ? (c.opens && new Date() < new Date(c.opens) ? `Voting for this award opens ${new Date(c.opens).toLocaleString()}.` : 'Voting for this award has closed. Thanks to everyone who voted!')
+    : 'The nominees for this award haven\'t been announced yet. Check back soon, or vote in another category.';
+  $('#board').hidden = !tier; $('#poolWrap').classList.toggle('picking', !tier);
   $('#poolTitle').textContent = c.nominees.some(n => n.link) ? 'Nominees — tap ▶ to watch' : 'Nominees';
   $('#modeBadge').hidden = live;
   $('#modeBadge').innerHTML = '<b>●</b> Demo mode — ballots stay in this browser';
@@ -315,13 +338,19 @@ function render(){
       <div class="label" style="background:${t.color}"><span class="t">${t.id}</span><span class="p">${t.points} pt${t.points > 1 ? 's' : ''}</span>${t.cap ? `<span class="c">${items.length}/${t.cap}</span>` : ''}</div>
       <div class="slots" data-tier="${t.id}">${items.map(cardHTML).join('')}</div></div>`;
   }).join('');
-  $('#pool').innerHTML = c.nominees.filter(n => !d[n.id]).map(cardHTML).join('') || '<span class="score" style="padding:8px">All nominees placed ✨</span>';
-
   const placed = Object.keys(d).length;
-  $('#progress').innerHTML = `<b>${placed}</b> of ${c.nominees.length} placed`;
-  $('#submitBtn').disabled = !placed;
-  const sel = selected && c.nominees.find(n => n.id === selected);
-  $('#hint').innerHTML = sel ? `Selected <b>${esc(sel.name)}</b> — tap a tier to place it, or the nominee pool to remove it.` : 'Drag a card into a tier, or tap a card then tap a tier.';
+  if (tier){
+    $('#pool').innerHTML = c.nominees.filter(n => !d[n.id]).map(n => cardHTML(n)).join('') || '<span class="score" style="padding:8px">All nominees placed ✨</span>';
+    $('#progress').innerHTML = `<b>${placed}</b> of ${c.nominees.length} placed`;
+    const sel = selected && c.nominees.find(n => n.id === selected);
+    $('#hint').innerHTML = sel ? `Selected <b>${esc(sel.name)}</b> — tap a tier to place it, or the nominee pool to remove it.` : 'Drag a card into a tier, or tap a card then tap a tier.';
+  } else {
+    // Pick methods: d = {nomineeId: order}; rank shows the order, other methods a check mark.
+    $('#pool').innerHTML = c.nominees.map(n => cardHTML(n, d[n.id] ? (c.method === 'rank' ? d[n.id] : '✓') : '')).join('');
+    $('#progress').innerHTML = `<b>${placed}</b> of ${picksMax(c)} picked`;
+    $('#hint').innerHTML = c.method === 'rank' ? 'Tap to add in order; tap again to remove.' : 'Tap to pick; tap again to remove.';
+  }
+  $('#submitBtn').disabled = !placed || (c.method === 'single' && placed !== 1);
 }
 
 /* ===== Placement ===== */
@@ -343,9 +372,23 @@ function place(id, tier){
   render();
 }
 
+function togglePick(id){
+  const c = cat(), d = draft();
+  if (d[id]){
+    const gone = d[id]; delete d[id];
+    Object.keys(d).forEach(k => { if (d[k] > gone) d[k]--; }); // keep ranks 1..n without gaps
+  } else if (c.method === 'single'){
+    Object.keys(d).forEach(k => delete d[k]); d[id] = 1;
+  } else if (Object.keys(d).length >= picksMax(c)){
+    toast(`You can pick up to ${picksMax(c)}. Remove one first.`); return;
+  } else d[id] = Object.keys(d).length + 1;
+  LS.set('aw.drafts', placements); render();
+}
+
 document.addEventListener('click', e => {
   if (e.target.closest('.play')) return;
   const card = e.target.closest('.card');
+  if (card && cat().method !== 'tier'){ togglePick(card.dataset.id); return; }
   if (card){ selected = selected === card.dataset.id ? null : card.dataset.id; render(); return; }
   const slots = e.target.closest('.slots, .tier');
   if (slots && selected){ place(selected, slots.dataset.tier || ''); return; }
@@ -354,7 +397,7 @@ document.addEventListener('click', e => {
 });
 
 // Desktop drag & drop
-document.addEventListener('dragstart', e => { const c = e.target.closest('.card'); if (!c) return; e.dataTransfer.setData('text/plain', c.dataset.id); c.classList.add('dragging'); });
+document.addEventListener('dragstart', e => { const c = e.target.closest('.card'); if (!c || cat().method !== 'tier') return; e.dataTransfer.setData('text/plain', c.dataset.id); c.classList.add('dragging'); });
 document.addEventListener('dragend', e => e.target.closest?.('.card')?.classList.remove('dragging'));
 document.addEventListener('dragover', e => { const z = e.target.closest('.slots, .tier'); if (z){ e.preventDefault(); z.closest('.tier')?.classList.add('over'); } });
 document.addEventListener('dragleave', e => e.target.closest?.('.tier')?.classList.remove('over'));
@@ -378,7 +421,8 @@ $('#submitBtn').onclick = async () => {
   if (USE_VOTER_CODES && live && !code){ toast('Enter your voter code.'); $('#voterCode').focus(); return; }
   const d = draft();
   const ballot = {action:'vote', voter:name, code, category:cat().id,
-    placements:Object.entries(d).map(([nominee, tier]) => ({nominee, tier}))};
+    placements:cat().method === 'tier' ? Object.entries(d).map(([nominee, tier]) => ({nominee, tier}))
+      : Object.entries(d).sort((a, b) => a[1] - b[1]).map(([nominee]) => ({nominee}))};
   const btn = $('#submitBtn'); btn.disabled = true; btn.textContent = 'Submitting…';
   try {
     if (live){
@@ -393,7 +437,7 @@ $('#submitBtn').onclick = async () => {
     submitted[cat().id] = true; LS.set('aw.submitted', submitted);
     LS.set('aw.voter', {name, code});
     $('#doneMsg').textContent = `Thanks ${name}! Your ${cat().title} ballot is in.`;
-    $('#nextCat').hidden = !CATEGORIES.some(x => x !== cat() && x.nominees.length && !submitted[x.id]);
+    $('#nextCat').hidden = !CATEGORIES.some(x => x !== cat() && x.nominees.length && !isClosed(x) && !submitted[x.id]);
     drawShare(name);
     show('done');
   } catch (err){ toast(err.message); }
@@ -412,9 +456,23 @@ function drawShare(name){
   x.strokeStyle = 'rgba(233,196,106,.35)'; x.lineWidth = 2; x.strokeRect(24, 24, W - 48, H - 48);
   x.textAlign = 'center';
   x.fillStyle = '#e9c46a'; x.font = `700 20px ${sans}`; x.fillText(EDITION.toUpperCase().split('').join(' '), W / 2, 84, W - 140);
-  x.fillStyle = metal(100, 150); x.font = `900 50px ${serif}`; x.fillText(`${name}'s tier list`.toUpperCase(), W / 2, 146, W - 140);
+  x.fillStyle = metal(100, 150); x.font = `900 50px ${serif}`; x.fillText(`${name}'s ${c.method === 'tier' ? 'tier list' : c.method === 'rank' ? 'ranking' : c.method === 'single' ? 'pick' : 'picks'}`.toUpperCase(), W / 2, 146, W - 140);
   x.fillStyle = 'rgba(245,241,232,.75)'; x.font = `600 24px ${sans}`; x.fillText(c.title, W / 2, 186, W - 140);
   x.textAlign = 'left';
+  if (c.method !== 'tier'){
+    const picks = Object.entries(d).sort((a, b) => a[1] - b[1]).map(([id]) => c.nominees.find(n => n.id === id)).filter(Boolean);
+    const rowH = Math.min(110, (H - 222 - 104) / Math.max(picks.length, 1));
+    picks.forEach((n, i) => {
+      const y = 222 + i * rowH;
+      x.fillStyle = 'rgba(255,255,255,.05)'; x.fillRect(60, y, W - 120, rowH - 12);
+      x.fillStyle = i === 0 ? metal(y, y + rowH - 12) : 'rgba(233,196,106,.25)'; x.fillRect(60, y, 90, rowH - 12);
+      x.fillStyle = i === 0 ? '#16120a' : '#f5f1e8'; x.font = `900 40px ${serif}`; x.textAlign = 'center';
+      x.fillText(c.method === 'rank' ? String(i + 1) : '★', 105, y + (rowH - 12) / 2 + 14); x.textAlign = 'left';
+      x.fillStyle = '#f5f1e8'; x.font = `700 32px ${sans}`; x.fillText(n.name, 180, y + (rowH - 12) / 2 + 11, W - 280);
+    });
+    x.textAlign = 'center'; x.fillStyle = 'rgba(245,241,232,.55)'; x.font = `600 20px ${sans}`; x.fillText('Cast your vote · benburnsred.github.io/anivote/awards/vote', W / 2, H - 46); x.textAlign = 'left';
+    return;
+  }
   const top = 222, rowH = (H - top - 104) / TIERS.length;
   TIERS.forEach((t, i) => {
     const y = top + i * rowH;
@@ -436,7 +494,7 @@ function drawShare(name){
 $('#saveImg').onclick = () => { const a = document.createElement('a'); a.download = `anivote-${cat().id}.png`; a.href = $('#shareCanvas').toDataURL('image/png'); a.click(); };
 // Next category that has nominees and hasn't been voted in yet.
 $('#nextCat').onclick = () => {
-  for (let k = 1; k <= CATEGORIES.length; k++){ const i = (catIdx + k) % CATEGORIES.length; if (CATEGORIES[i].nominees.length && !submitted[CATEGORIES[i].id]){ catIdx = i; break; } }
+  for (let k = 1; k <= CATEGORIES.length; k++){ const i = (catIdx + k) % CATEGORIES.length; if (CATEGORIES[i].nominees.length && !isClosed(CATEGORIES[i]) && !submitted[CATEGORIES[i].id]){ catIdx = i; break; } }
   show('vote');
 };
 $('#seeResults').onclick = () => show('results');
@@ -542,7 +600,9 @@ const me = LS.get('aw.voter', null);
 if (me){ $('#voterName').value = me.name || ''; $('#voterCode').value = me.code || ''; }
 loadData().then(() => {
   if (!CATEGORIES.length) throw new Error('No categories found');
-  catIdx = Math.max(0, CATEGORIES.findIndex(c => c.nominees.length));
+  // Start on the first category open for voting, else the first with nominees.
+  const openIdx = CATEGORIES.findIndex(c => c.nominees.length && !isClosed(c));
+  catIdx = openIdx >= 0 ? openIdx : Math.max(0, CATEGORIES.findIndex(c => c.nominees.length));
   render(); loadCovers();
 }).catch(e => { $('#catTitle').textContent = 'Ballot unavailable'; $('#catBlurb').textContent = `Couldn't load the categories (${e.message}). Please try again later.`; $('#ballot').hidden = true; });
 </script>

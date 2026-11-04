@@ -1,4 +1,4 @@
-# AxA Awards
+# Anime X Angas Awards
 
 | Page | URL | What it is |
 |---|---|---|
@@ -36,7 +36,7 @@ Two columns, `key` and `value`:
 
 | key | Example | Effect |
 |---|---|---|
-| `title` | AxA Awards 2026 | Big heading and browser tab |
+| `title` | Anime X Angas Awards 2026 | Big heading and browser tab |
 | `tagline` | Celebrating the year's best anime | Line under the title |
 | `date` | 2026-12-20T19:00:00+08:00 | Date line and countdown. Blank = "Date to be announced". Include the time zone offset |
 | `venue` | Online · YouTube | Shown next to the date |

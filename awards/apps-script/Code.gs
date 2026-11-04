@@ -1,5 +1,5 @@
 /**
- * AxA Awards — Google Sheets backend.
+ * Anime X Angas Awards — Google Sheets backend.
  *
  * Bound to a private Google Sheet (Extensions → Apps Script). Deploy as a web app:
  *   Execute as: Me · Who has access: Anyone

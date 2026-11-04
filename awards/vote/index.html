@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#0d0f1a">
-<title>AxA Awards — Ballot</title>
+<title>Anime X Angas Awards — Ballot</title>
 <style>
 :root{--bg:#0d0f1a;--panel:#161a2b;--panel2:#1d2236;--ink:#eef0ff;--muted:#9aa1c0;--line:#2a3150;--accent:#a99aff;--accent2:#7c5cff;
 --S:#ff5d7a;--A:#ff9f43;--B:#ffd43b;--C:#5ad18a;--D:#4dabf7;--good:#5ad18a;--bad:#ff5d7a}
@@ -88,7 +88,7 @@ footer a{color:var(--accent)}
 <body>
 <div class="wrap">
   <header>
-    <a class="brand" href="../">Ax<span>A</span> Awards</a>
+    <a class="brand" href="../">Anime <span>X</span> Angas Awards</a>
     <nav class="tabs"><button data-view="vote" class="on">Vote</button><button data-view="results">Results</button></nav>
   </header>
 
@@ -329,7 +329,7 @@ function drawShare(name){
   const css = v => getComputedStyle(document.documentElement).getPropertyValue(v.slice(4, -1)).trim();
   const g = x.createLinearGradient(0, 0, W, H); g.addColorStop(0, '#151c2d'); g.addColorStop(.55, '#2c2452'); g.addColorStop(1, '#6d55df');
   x.fillStyle = g; x.fillRect(0, 0, W, H);
-  x.fillStyle = '#c7bcff'; x.font = '900 26px system-ui,sans-serif'; x.fillText('AXA AWARDS 2026', 60, 80);
+  x.fillStyle = '#c7bcff'; x.font = '900 26px system-ui,sans-serif'; x.fillText('ANIME X ANGAS AWARDS 2026', 60, 80);
   x.fillStyle = '#fff'; x.font = '900 52px system-ui,sans-serif'; x.fillText(`${name}'s ${c.title.replace(' of the Year', '')}s`, 60, 145);
   const top = 190, rowH = (H - top - 70) / TIERS.length;
   TIERS.forEach((t, i) => {

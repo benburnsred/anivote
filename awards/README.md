@@ -17,6 +17,10 @@ Everything on a year's page comes from two tables in its folder, so you never ed
 
 Either edit those files or point the page at a Google Sheet you manage.
 
+## Cover art
+
+Every deploy runs `awards/tools/fetch_covers.py`: for each nominee with an `image_search` title and no `image`, it finds the poster on AniList (then Jikan / MyAnimeList), saves it to `awards/img/covers/`, fills in `image`, and commits the result. Pages load covers from the site itself, so they keep working even when those services are down, and archived years stay complete. The step's summary on the Actions tab lists any titles it couldn't find; give those a different `image_search` (or alternatives separated by ` | `) or paste an image link into `image`.
+
 ## Nominees table
 
 One row per nominee. Rows with the same `category` are grouped, in sheet order. A row with only a category name (no nominee) shows that category as "Nominees coming soon".
@@ -29,7 +33,7 @@ One row per nominee. Rows with the same `category` are grouped, in sheet order. 
 | `nominee` | yes* | lulu. | Leave blank for a category with no nominees yet |
 | `subtitle` | no | Mrs. GREEN APPLE · Frieren Season 2 | Artist, studio, show… |
 | `image` | no | https://…/poster.jpg | Direct image link. Tall (3:4) images look best |
-| `image_search` | no | Sousou no Frieren 2nd Season | If `image` is blank, cover art is looked up on AniList (then MyAnimeList) by this anime title. Use `image` to pick an exact picture |
+| `image_search` | no | Sousou no Frieren 2nd Season | Anime title to fetch cover art for when `image` is blank. List alternatives with ` \| ` if one name doesn't match. Use `image` to pick an exact picture |
 | `link` | no | https://youtube.com/… | Makes the card clickable |
 | `winner` | no | TRUE | `TRUE`, `yes` or `x` marks the winner. Shown only when `reveal_winners` is on |
 | `result` | no | 412 pts · 31% | Free text under the nominee. Shown only when `show_results` is on |
